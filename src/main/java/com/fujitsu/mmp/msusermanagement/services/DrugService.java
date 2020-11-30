@@ -14,7 +14,6 @@ import com.fujitsu.mmp.msusermanagement.mappers.DrugMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.DrugHistoryRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.DrugRepository;
 import org.bson.types.ObjectId;
-import org.javamoney.moneta.Money;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
