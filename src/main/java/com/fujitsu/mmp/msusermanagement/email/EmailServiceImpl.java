@@ -39,6 +39,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${mail.noreply.address}")
     private String NOREPLY_ADDRESS;
 
+    @Value("${mail.link.url}")
+    private String LINK_URL;
+
     @Override
     public void sendSimpleMessage(String to, String subject, String text) {
         try {
@@ -134,6 +137,6 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private String generateLink(String identifier) {
-        return "<a href=\"http://localhost:3000/mmp-cancer/new-password?token="+jwtUtility.generateTokenForLink(identifier)+"\">link</a>";
+        return "<a href=\""+LINK_URL+jwtUtility.generateTokenForLink(identifier)+"\">link</a>";
     }
 }

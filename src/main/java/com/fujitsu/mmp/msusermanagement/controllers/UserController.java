@@ -1,6 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
 import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserDTO;
 import com.fujitsu.mmp.msusermanagement.services.UserService;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -13,7 +14,7 @@ import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "*", maxAge = 3600, exposedHeaders = "Authorization")
 @RequestMapping("/api/users")
 @RestController
 public class UserController {
@@ -65,8 +66,8 @@ public class UserController {
                             "Default sort order is ascending. " +
                             "Multiple sort criteria are supported.")
     })
-    public ResponseEntity<Page<UserDTO>> findAllByPage(@ApiIgnore("Ignored because swagger ui shows the wrong params, instead they are explained in the implicit params") Pageable pageable, UserDTO userDTO) {
-        return userService.findAllByPage(pageable, userDTO);
+    public ResponseEntity<Page<UserDTO>> findAllByPage(@ApiIgnore("Ignored because swagger ui shows the wrong params, instead they are explained in the implicit params") Pageable pageable, FilterUserDTO filterUserDTO) {
+        return userService.findAllByPage(pageable, filterUserDTO);
     }
 
     /**
@@ -97,7 +98,7 @@ public class UserController {
      * @return SuccessResponseDto with true if the element has been deleted
      */
     @DeleteMapping("/user/id/{identifier}")
-    public ResponseEntity<Void> delete(@PathVariable String identifier) {
+    public ResponseEntity<?> delete(@PathVariable String identifier) {
         return userService.delete(identifier);
     }
 

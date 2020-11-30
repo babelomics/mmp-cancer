@@ -2,6 +2,7 @@ package com.fujitsu.mmp.msusermanagement.repositories;
 
 import com.fujitsu.mmp.msusermanagement.entities.UserHistory;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 @Repository

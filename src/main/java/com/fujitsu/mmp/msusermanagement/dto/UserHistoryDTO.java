@@ -1,5 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,8 +19,11 @@ public class UserHistoryDTO {
     private String accessType;
     private String email;
     private String organization;
+    @JsonFormat(pattern="dd/MM/yyyy")
     private Date dateCreated;
+    @JsonFormat(pattern="dd/MM/yyyy")
     private Date dateLastAccess;
+    @JsonFormat(pattern="dd/MM/yyyy")
     private Date dateDeleted;
     private String userType;
 }

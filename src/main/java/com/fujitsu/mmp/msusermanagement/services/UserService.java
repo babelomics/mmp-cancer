@@ -2,16 +2,21 @@ package com.fujitsu.mmp.msusermanagement.services;
 
 import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
 import com.fujitsu.mmp.msusermanagement.dto.UserHistoryDTO;
+import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserDTO;
 import com.fujitsu.mmp.msusermanagement.email.EmailServiceImpl;
+import com.fujitsu.mmp.msusermanagement.entities.Configuration;
 import com.fujitsu.mmp.msusermanagement.entities.Permission;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.mappers.UserMapper;
 import com.fujitsu.mmp.msusermanagement.model.response.MessageResponse;
+import com.fujitsu.mmp.msusermanagement.repositories.ConfigurationRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.PermissionRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
 import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +31,9 @@ public class UserService {
 
     @Autowired
     private PermissionRepository permissionRepository;
+
+    @Autowired
+    private ConfigurationRepository configurationRepository;
 
     @Autowired
     private UserHistoryService userHistoryService;
@@ -109,32 +117,23 @@ public class UserService {
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 
-
-    public ResponseEntity<Page<UserDTO>> findAllByPage(Pageable pageable, UserDTO userDTO) {
+    public ResponseEntity<Page<UserDTO>> findAllByPage(Pageable pageable, FilterUserDTO filterUserDTO) {
         HttpStatus responseStatus = HttpStatus.OK;
+
         Page<UserDTO> responseBody;
 
-        userDTO.setLastName(userDTO.getFirstName());
-        User user = userMapper.dtoToEntity(userDTO);
+        Page<User> pageEntity = userRepository.findUsersByFilters(filterUserDTO.getIdentifier(), filterUserDTO.getFirstName(),
+                filterUserDTO.getEmail(),filterUserDTO.getOrganization(), filterUserDTO.getDateCreatedStart(), filterUserDTO.getDateCreatedEnd(),
+                filterUserDTO.getDateLastAccessStart(), filterUserDTO.getDateLastAccessEnd(), filterUserDTO.getUserType(),
+                filterUserDTO.getSearch(), pageable);
 
-        ExampleMatcher customExampleMatcher = ExampleMatcher.matching()
-                .withMatcher("identifier", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("firstName", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("lastName", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("organization", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("email", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("userType", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase());
+        List<UserDTO> userDTOList = userMapper.listEntityToListDto(pageEntity.getContent());
 
-
-        Example userExample = Example.of(user, customExampleMatcher);
-
-        Page<User> pageEntity = userRepository.findAll(userExample, pageable);
-
-        List<UserDTO> contentDto = userMapper.listEntityToListDto(pageEntity.getContent());
-        responseBody = new PageImpl<>(contentDto, pageable, pageEntity.getTotalElements());
+        responseBody = new PageImpl<>(userDTOList, pageable, pageEntity.getTotalElements());
 
         return new ResponseEntity<>(responseBody, responseStatus);
     }
+
 
     public ResponseEntity<UserDTO> update(String identifier, UserDTO userDTO) {
         HttpStatus responseStatus = HttpStatus.OK;
@@ -148,19 +147,42 @@ public class UserService {
             User entity = userRepository.findByIdentifier(identifier);
             if (entity == null) {
                 responseStatus = HttpStatus.NOT_FOUND;
+            } else if (entity.getUserType().equals("Admin") && !entity.getUserType().equals(userDTO.getUserType()) &&
+                    userRepository.countByUserType(entity.getUserType()) <= 1) {
+                responseStatus = HttpStatus.LOCKED;
+            } else if (entity.getUserType().equals("Admin") && !entity.getUserType().equals(userDTO.getUserType()) &&
+            configurationRepository.findByContactIdentifier(identifier) != null){
+                responseStatus = HttpStatus.EXPECTATION_FAILED;
             } else if (!entity.getVersion().equals(userDTO.getVersion())) {
                 responseStatus = HttpStatus.CONFLICT;
             } else {
+
                 User entityToSave = userMapper.dtoToEntity(userDTO);
                 entityToSave.setId(entity.getId());
                 entityToSave = userRepository.save(entityToSave);
                 responseBody = userMapper.entityToDTO(entityToSave);
+
+                if(!userDTO.getCanCreateProject().equals(entity.getCanCreateProject())){
+
+                    Permission userPermissionCreateProjects
+                            = findPermission("create-project-undefined");
+                    Set<User> users = userPermissionCreateProjects.getUsers();
+
+                    if(userDTO.getCanCreateProject()) {
+                        users.add(entityToSave);
+                    }else{
+                        users.remove(entityToSave);
+                    }
+
+                    userPermissionCreateProjects.setUsers(users);
+                    permissionRepository.save(userPermissionCreateProjects);
+                }
             }
         }
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 
-    public ResponseEntity<Void> delete(String identifier) {
+    public ResponseEntity<?> delete(String identifier) {
         HttpStatus responseStatus = HttpStatus.NO_CONTENT;
 
         User elementToDelete = userRepository.findByIdentifier(identifier);
@@ -168,6 +190,19 @@ public class UserService {
         if (elementToDelete == null) {
             responseStatus = HttpStatus.NOT_FOUND;
         } else {
+            if(elementToDelete.getUserType().equals("Admin")){
+                if(userRepository.countByUserType(elementToDelete.getUserType()) <= 1){
+                    return new ResponseEntity<>(
+                            "Error: It is necessary to have at least one administrator in the system!",
+                            HttpStatus.LOCKED);
+                }
+                Configuration configuration = configurationRepository.findByContactIdentifier(identifier);
+                if(configuration != null){
+                    return new ResponseEntity<>(
+                            "Error: You will proceed to delete the contact administrator user.",
+                            HttpStatus.EXPECTATION_FAILED);
+                }
+            }
 
             UserDTO userDTO = userMapper.entityToDTO(elementToDelete);
             UserHistoryDTO userHistoryDTO = new UserHistoryDTO();

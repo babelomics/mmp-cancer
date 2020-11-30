@@ -3,6 +3,7 @@ package com.fujitsu.mmp.msusermanagement.services;
 import com.fujitsu.mmp.msusermanagement.dto.NotificationDTO;
 import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
 import com.fujitsu.mmp.msusermanagement.dto.UserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserRegistryRequestDTO;
 import com.fujitsu.mmp.msusermanagement.email.EmailServiceImpl;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.entities.UserRegistryRequest;
@@ -34,13 +35,11 @@ public class UserRegistryRequestService {
     @Autowired
     private UserRepository userRepository;
 
-    private final UserRegistryRequestRepository userRegistryRequestRepository;
-    private final UserRegistryRequestMapper userRegistryRequestMapper;
+    @Autowired
+    private  UserRegistryRequestRepository userRegistryRequestRepository;
 
-    public UserRegistryRequestService (UserRegistryRequestRepository userRegistryRequestRepository, UserRegistryRequestMapper userRegistryRequestMapper){
-        this.userRegistryRequestMapper = userRegistryRequestMapper;
-        this.userRegistryRequestRepository = userRegistryRequestRepository;
-    }
+    @Autowired
+    private  UserRegistryRequestMapper userRegistryRequestMapper;
 
     public ResponseEntity<?> createUserRegistryRequest(UserRegistryRequestDTO userRegistryRequestDTO) {
         HttpStatus responseStatus = HttpStatus.CREATED;
@@ -86,29 +85,22 @@ public class UserRegistryRequestService {
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 
-    public ResponseEntity<Page<UserRegistryRequestDTO>> findAllByPage(Pageable pageable, UserRegistryRequestDTO userRegistryRequestDTO) {
+    public ResponseEntity<Page<UserRegistryRequestDTO>> findAllByPage(Pageable pageable, FilterUserRegistryRequestDTO filterUserRegistryRequestDTO) {
         HttpStatus responseStatus = HttpStatus.OK;
         Page<UserRegistryRequestDTO> responseBody;
 
-        userRegistryRequestDTO.setLastName(userRegistryRequestDTO.getFirstName());
-        UserRegistryRequest userRegistryRequest = userRegistryRequestMapper.dtoToEntity(userRegistryRequestDTO);
+      Page<UserRegistryRequest> pageEntity = userRegistryRequestRepository.findUserRegistryRequestsByFilters(filterUserRegistryRequestDTO.getIdentifier(),
+                filterUserRegistryRequestDTO.getFirstName(), filterUserRegistryRequestDTO.getOrganization(), filterUserRegistryRequestDTO.getApplicationDateStart(),
+                filterUserRegistryRequestDTO.getApplicationDateEnd(), filterUserRegistryRequestDTO.getAttended(), filterUserRegistryRequestDTO.getSearch(),
+                pageable);
 
-        ExampleMatcher customExampleMatcher = ExampleMatcher.matching()
-                .withMatcher("identifier", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("firstName", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("lastName", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase())
-                .withMatcher("organization", ExampleMatcher.GenericPropertyMatchers.contains().ignoreCase());
+        List<UserRegistryRequestDTO> userRegistryRequestDTOList = userRegistryRequestMapper.listEntityToListDto(pageEntity.getContent());
 
-        Example userRegistryRequestExample = Example.of(userRegistryRequest, customExampleMatcher);
-
-        Page<UserRegistryRequest> pageEntity = userRegistryRequestRepository.findAll(userRegistryRequestExample, pageable);
-
-
-        List<UserRegistryRequestDTO> contentDto = userRegistryRequestMapper.listEntityToListDto(pageEntity.getContent());
-        responseBody = new PageImpl<>(contentDto, pageable, pageEntity.getTotalElements());
+        responseBody = new PageImpl<>(userRegistryRequestDTOList, pageable, pageEntity.getTotalElements());
 
         return new ResponseEntity<>(responseBody, responseStatus);
     }
+
 
     public ResponseEntity<UserRegistryRequestDTO> update(String identifier, UserRegistryRequestDTO userRegistryRequestDTO) {
 

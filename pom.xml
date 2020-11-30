@@ -12,7 +12,7 @@
 	<artifactId>ms-user-management</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ms-user-management</name>
-	<description>Microservice User Management Project for MMPCancer</description>
+	<description>Microservice User Management Project for MMP</description>
 
 	<properties>
 		<java.version>11</java.version>
@@ -43,7 +43,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-mongodb</artifactId>
 		</dependency>
-		
+
 		<dependency>
 		    <groupId>io.springfox</groupId>
 		    <artifactId>springfox-swagger2</artifactId>
@@ -60,6 +60,11 @@
 		    <groupId>io.springfox</groupId>
 		    <artifactId>springfox-bean-validators</artifactId>
 		    <version>2.9.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
 
 		<dependency>

@@ -14,7 +14,6 @@ public class SignupRequest {
     private String identifier;
     private String password;
     private String email;
-
     private String firstName;
     private String lastName;
     private String accessType;

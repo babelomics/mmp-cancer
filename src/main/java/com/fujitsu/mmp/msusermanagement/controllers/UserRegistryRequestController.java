@@ -1,6 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
 import com.fujitsu.mmp.msusermanagement.dto.UserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserRegistryRequestDTO;
 import com.fujitsu.mmp.msusermanagement.services.UserRegistryRequestService;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -13,7 +14,7 @@ import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "*", maxAge = 3600, exposedHeaders = "Authorization")
 @RequestMapping("/api/registry")
 @RestController
 public class UserRegistryRequestController {
@@ -55,8 +56,8 @@ public class UserRegistryRequestController {
                             "Default sort order is ascending. " +
                             "Multiple sort criteria are supported.")
     })
-    public ResponseEntity<Page<UserRegistryRequestDTO>> findAllByPage(@ApiIgnore("Ignored because swagger ui shows the wrong params, instead they are explained in the implicit params") Pageable pageable, UserRegistryRequestDTO userRegistryRequestDTO) {
-        return userRegistryRequestService.findAllByPage(pageable, userRegistryRequestDTO);
+    public ResponseEntity<Page<UserRegistryRequestDTO>> findAllByPage(@ApiIgnore("Ignored because swagger ui shows the wrong params, instead they are explained in the implicit params") Pageable pageable, FilterUserRegistryRequestDTO filterUserRegistryRequestDTO) {
+        return userRegistryRequestService.findAllByPage(pageable, filterUserRegistryRequestDTO);
     }
 
     /**
