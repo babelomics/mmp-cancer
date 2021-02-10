@@ -34,7 +34,7 @@ public class JwtFilter extends OncePerRequestFilter {
         if (null != authorization && authorization.startsWith("Bearer ")) {
             token = authorization.substring(7);
 
-            token = jwtUtility.refreshToken(token);
+            token = jwtUtility.refreshToken(token, 10L);
             httpServletResponse.setHeader("Authorization", token);
 
             identifier = jwtUtility.getUsernameFromToken(token);

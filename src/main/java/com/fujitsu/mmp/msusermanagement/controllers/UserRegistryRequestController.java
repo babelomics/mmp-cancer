@@ -1,7 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserRegistryRequestDTO;
-import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserRegistryRequestDTO;
 import com.fujitsu.mmp.msusermanagement.services.UserRegistryRequestService;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;

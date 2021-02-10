@@ -1,9 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.mappers;
 
-import com.fujitsu.mmp.msusermanagement.dto.NotificationDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserHistoryDTO;
+import com.fujitsu.mmp.msusermanagement.dto.notification.NotificationDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Notification;
-import com.fujitsu.mmp.msusermanagement.entities.UserHistory;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 

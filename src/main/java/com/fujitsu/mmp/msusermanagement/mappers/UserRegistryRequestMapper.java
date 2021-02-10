@@ -1,6 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.mappers;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserRegistryRequestDTO;
 import com.fujitsu.mmp.msusermanagement.entities.UserRegistryRequest;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;

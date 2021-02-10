@@ -2,10 +2,10 @@ package com.fujitsu.mmp.msusermanagement.services;
 
 import com.fujitsu.mmp.msusermanagement.entities.Permission;
 import com.fujitsu.mmp.msusermanagement.entities.User;
-import com.fujitsu.mmp.msusermanagement.model.request.LoginRequest;
-import com.fujitsu.mmp.msusermanagement.model.request.SignupRequest;
-import com.fujitsu.mmp.msusermanagement.model.response.JwtResponse;
-import com.fujitsu.mmp.msusermanagement.model.response.MessageResponse;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.request.LoginRequest;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.request.SignupRequest;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.response.JwtResponse;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.repositories.PermissionRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
 import com.fujitsu.mmp.msusermanagement.security.UserDetailsImpl;
@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
 import java.util.List;
 
@@ -71,4 +72,9 @@ public class AuthService {
                 ));
     }
 
+    public ResponseEntity<?> refreshToken(String token, HttpServletResponse response) {
+        String refreshedToken = jwtUtils.refreshToken(token, null);
+        response.setHeader("Authorization", refreshedToken);
+        return ResponseEntity.ok("");
+    }
 }

@@ -1,10 +1,8 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
-import com.fujitsu.mmp.msusermanagement.dto.ConfigurationDTO;
-import com.fujitsu.mmp.msusermanagement.dto.pandrugsapi.DrugResponse;
-import com.fujitsu.mmp.msusermanagement.dto.pandrugsapi.LoginSession;
-import com.fujitsu.mmp.msusermanagement.dto.pandrugsapi.PandrugsConfigurationDTO;
-import com.fujitsu.mmp.msusermanagement.dto.pandrugsapi.Registry;
+import com.fujitsu.mmp.msusermanagement.apis.pandrugsapi.LoginSession;
+import com.fujitsu.mmp.msusermanagement.apis.pandrugsapi.PandrugsConfigurationDTO;
+import com.fujitsu.mmp.msusermanagement.apis.pandrugsapi.Registry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +11,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service

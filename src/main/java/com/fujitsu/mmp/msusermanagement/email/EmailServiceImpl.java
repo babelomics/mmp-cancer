@@ -1,9 +1,9 @@
 package com.fujitsu.mmp.msusermanagement.email;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserRegistryRequestDTO;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.mappers.UserMapper;
-import com.fujitsu.mmp.msusermanagement.model.response.MessageResponse;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
 import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
 import org.springframework.beans.factory.annotation.Autowired;

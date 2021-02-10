@@ -1,14 +1,14 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserHistoryDTO;
-import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserHistoryDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserDTO;
 import com.fujitsu.mmp.msusermanagement.email.EmailServiceImpl;
 import com.fujitsu.mmp.msusermanagement.entities.Configuration;
 import com.fujitsu.mmp.msusermanagement.entities.Permission;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.mappers.UserMapper;
-import com.fujitsu.mmp.msusermanagement.model.response.MessageResponse;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.repositories.ConfigurationRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.PermissionRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
@@ -75,7 +75,7 @@ public class UserService {
 
         if(userDTO.getCanCreateProject()) {
             Permission userPermissionCreateProjects
-                    = findPermission("create-project-undefined");
+                    = findPermission("create-projects-undefined");
 
             Set<User> users = userPermissionCreateProjects.getUsers();
             users.add(createdUser);
@@ -122,10 +122,7 @@ public class UserService {
 
         Page<UserDTO> responseBody;
 
-        Page<User> pageEntity = userRepository.findUsersByFilters(filterUserDTO.getIdentifier(), filterUserDTO.getFirstName(),
-                filterUserDTO.getEmail(),filterUserDTO.getOrganization(), filterUserDTO.getDateCreatedStart(), filterUserDTO.getDateCreatedEnd(),
-                filterUserDTO.getDateLastAccessStart(), filterUserDTO.getDateLastAccessEnd(), filterUserDTO.getUserType(),
-                filterUserDTO.getSearch(), pageable);
+        Page<User> pageEntity = userRepository.findUsersByFilters(filterUserDTO, pageable);
 
         List<UserDTO> userDTOList = userMapper.listEntityToListDto(pageEntity.getContent());
 
@@ -155,6 +152,8 @@ public class UserService {
                 responseStatus = HttpStatus.EXPECTATION_FAILED;
             } else if (!entity.getVersion().equals(userDTO.getVersion())) {
                 responseStatus = HttpStatus.CONFLICT;
+            }else if(!userDTO.getEmail().equals(entity.getEmail()) && userRepository.existsByEmail(entity.getEmail())){
+                responseStatus = HttpStatus.CONFLICT;
             } else {
 
                 User entityToSave = userMapper.dtoToEntity(userDTO);
@@ -165,7 +164,7 @@ public class UserService {
                 if(!userDTO.getCanCreateProject().equals(entity.getCanCreateProject())){
 
                     Permission userPermissionCreateProjects
-                            = findPermission("create-project-undefined");
+                            = findPermission("create-projects-undefined");
                     Set<User> users = userPermissionCreateProjects.getUsers();
 
                     if(userDTO.getCanCreateProject()) {
@@ -208,7 +207,6 @@ public class UserService {
             UserHistoryDTO userHistoryDTO = new UserHistoryDTO();
             userHistoryDTO.setFirstName((userDTO.getFirstName()));
             userHistoryDTO.setLastName(userDTO.getLastName());
-            userHistoryDTO.setPassword(userDTO.getPassword());
             userHistoryDTO.setIdentifier(userDTO.getIdentifier());
             userHistoryDTO.setAccessType(userDTO.getAccessType());
             userHistoryDTO.setEmail(userDTO.getEmail());
@@ -235,7 +233,7 @@ public class UserService {
         return permission;
     }
 
-    public ResponseEntity<UserDTO> changePassword(String identifier, UserDTO userDTO) {
+    public ResponseEntity<UserDTO> changePassword(String identifier, String password) {
         HttpStatus responseStatus = HttpStatus.OK;
         UserDTO responseBody = null;
 
@@ -246,7 +244,7 @@ public class UserService {
             if (entity == null) {
                 responseStatus = HttpStatus.NOT_FOUND;
             } else {
-                entity.setPassword(encoder.encode(userDTO.getPassword()));
+                entity.setPassword(encoder.encode(password));
                 entity = userRepository.save(entity);
                 responseBody = userMapper.entityToDTO(entity);
             }

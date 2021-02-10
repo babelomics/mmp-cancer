@@ -1,9 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
-import com.fujitsu.mmp.msusermanagement.dto.NotificationDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.notification.NotificationDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Notification;
-import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.mappers.NotificationMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.NotificationRepository;
 import org.springframework.http.HttpStatus;

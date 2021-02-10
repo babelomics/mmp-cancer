@@ -1,6 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.email;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserRegistryRequestDTO;
 import org.springframework.http.ResponseEntity;
 
 public interface EmailService {

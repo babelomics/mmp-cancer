@@ -1,6 +1,5 @@
 package com.fujitsu.mmp.msusermanagement.utility;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Permission;
 import com.fujitsu.mmp.msusermanagement.security.UserDetailsServiceImpl;
 import io.jsonwebtoken.Claims;
@@ -150,12 +149,12 @@ public class JWTUtility implements Serializable {
      * @param token
      * @return
      */
-    public String refreshToken(String token) {
+    public String refreshToken(String token, Long diffMinutes) {
 
         long diffInMillis = Math.abs(getExpirationDateFromToken(token).getTime() - new Date().getTime());
         long diffInMinutes = TimeUnit.MINUTES.convert(diffInMillis, TimeUnit.MILLISECONDS);
 
-        if (diffInMinutes < 10L) {
+        if (diffMinutes != null && diffInMinutes < diffMinutes || diffMinutes == null) {
             String identifier = getUsernameFromToken(token);
             UserDetails userDetails
                     = userDetailsService.loadUserByUsername(identifier);

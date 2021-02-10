@@ -1,12 +1,12 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
-import com.fujitsu.mmp.msusermanagement.dto.pandrugsapi.PandrugsConfigurationDTO;
+import com.fujitsu.mmp.msusermanagement.apis.pandrugsapi.PandrugsConfigurationDTO;
 import com.fujitsu.mmp.msusermanagement.services.PandrugService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "*", maxAge = 3600, exposedHeaders = "Authorization")
 @RequestMapping("/api/pandrugs")
 @RestController
 public class PandrugsController {

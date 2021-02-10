@@ -1,13 +1,14 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
-import com.fujitsu.mmp.msusermanagement.model.request.LoginRequest;
-import com.fujitsu.mmp.msusermanagement.model.request.SignupRequest;
-import com.fujitsu.mmp.msusermanagement.model.response.JwtResponse;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.request.LoginRequest;
+import com.fujitsu.mmp.msusermanagement.dto.jwt.request.SignupRequest;
 import com.fujitsu.mmp.msusermanagement.services.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
 @CrossOrigin(origins = "*", maxAge = 3600)

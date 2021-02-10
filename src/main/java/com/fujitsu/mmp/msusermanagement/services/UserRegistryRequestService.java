@@ -1,9 +1,9 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
-import com.fujitsu.mmp.msusermanagement.dto.NotificationDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserRegistryRequestDTO;
-import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.notification.NotificationDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserRegistryRequestDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserRegistryRequestDTO;
 import com.fujitsu.mmp.msusermanagement.email.EmailServiceImpl;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.entities.UserRegistryRequest;
@@ -89,10 +89,7 @@ public class UserRegistryRequestService {
         HttpStatus responseStatus = HttpStatus.OK;
         Page<UserRegistryRequestDTO> responseBody;
 
-      Page<UserRegistryRequest> pageEntity = userRegistryRequestRepository.findUserRegistryRequestsByFilters(filterUserRegistryRequestDTO.getIdentifier(),
-                filterUserRegistryRequestDTO.getFirstName(), filterUserRegistryRequestDTO.getOrganization(), filterUserRegistryRequestDTO.getApplicationDateStart(),
-                filterUserRegistryRequestDTO.getApplicationDateEnd(), filterUserRegistryRequestDTO.getAttended(), filterUserRegistryRequestDTO.getSearch(),
-                pageable);
+      Page<UserRegistryRequest> pageEntity = userRegistryRequestRepository.findUserRegistryRequestsByFilters(filterUserRegistryRequestDTO, pageable);
 
         List<UserRegistryRequestDTO> userRegistryRequestDTOList = userRegistryRequestMapper.listEntityToListDto(pageEntity.getContent());
 

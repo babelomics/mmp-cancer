@@ -26,5 +26,5 @@ public class Configuration {
     private String pandrugUser;
     private String pandrugEmail;
     private String pandrugPassword;
-    private String cellbaseURL;
+    private String genomicDictionaryURL;
 }

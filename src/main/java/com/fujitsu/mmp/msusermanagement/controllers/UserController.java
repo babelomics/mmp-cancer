@@ -1,7 +1,9 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
-import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserDTO;
+
+import com.fujitsu.mmp.msusermanagement.dto.user.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserDTO;
+import com.fujitsu.mmp.msusermanagement.services.AuthService;
 import com.fujitsu.mmp.msusermanagement.services.UserService;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -12,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
 @CrossOrigin(origins = "*", maxAge = 3600, exposedHeaders = "Authorization")
@@ -21,6 +25,9 @@ public class UserController {
 
     @Autowired
     private  UserService userService;
+
+    @Autowired
+    AuthService authService;
 
     /**
      * Create a new User
@@ -84,12 +91,12 @@ public class UserController {
     /**
      * Update the password of a user
      * @param identifier of the user entity
-     * @param userDTO entity to update
+     * @param password entity to update
      * @return userDTO updated
      */
     @PutMapping("/user/id/{identifier}/changePassword")
-    public ResponseEntity<UserDTO> changePassword (@PathVariable String identifier, @RequestBody UserDTO userDTO) {
-        return userService.changePassword(identifier, userDTO);
+    public ResponseEntity<UserDTO> changePassword (@PathVariable String identifier, @RequestBody String password) {
+        return userService.changePassword(identifier, password);
     }
 
     /**
@@ -102,4 +109,12 @@ public class UserController {
         return userService.delete(identifier);
     }
 
+    /**
+     * Refresh user token
+     * @return Refreshed token in Authorization header.
+     */
+    @PostMapping("/refreshToken")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        return authService.refreshToken(request.getHeader("Authorization").substring(7), response);
+    }
 }

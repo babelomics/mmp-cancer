@@ -29,8 +29,8 @@ public class SetupDataLoader implements
     @Value("${pandrugs.base.url}")
     String PANDRUGS_BASE_URL;
 
-    @Value("${cellbase.base.url}")
-    String CELLBASE_BASE_URL;
+    @Value("${genomic.dictionary.base.url}")
+    String GENOMIC_DICTIONARY_BASE_URL;
 
     private static final Logger log = LoggerFactory.getLogger(SetupDataLoader.class);
 
@@ -70,7 +70,7 @@ public class SetupDataLoader implements
             mongoTemplate.createCollection("configurations");
             Configuration configuration = new Configuration();
             configuration.setPandrugURL(PANDRUGS_BASE_URL);
-            configuration.setCellbaseURL(CELLBASE_BASE_URL);
+            configuration.setGenomicDictionaryURL(GENOMIC_DICTIONARY_BASE_URL);
             configurationRepository.save(configuration);
         }
 

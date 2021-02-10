@@ -1,6 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.mappers;
 
-import com.fujitsu.mmp.msusermanagement.dto.DrugDTO;
+import com.fujitsu.mmp.msusermanagement.dto.drug.DrugDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Drug;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;

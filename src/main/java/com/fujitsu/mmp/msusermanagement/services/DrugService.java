@@ -1,21 +1,18 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
-import com.fujitsu.mmp.msusermanagement.dto.AvailabilityDrugDTO;
-import com.fujitsu.mmp.msusermanagement.dto.DrugDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
-import com.fujitsu.mmp.msusermanagement.dto.filters.FilterDrugDTO;
-import com.fujitsu.mmp.msusermanagement.dto.pandrugsapi.DrugResponse;
-import com.fujitsu.mmp.msusermanagement.dto.pandrugsapi.SourceNameResponse;
+import com.fujitsu.mmp.msusermanagement.dto.drug.AvailabilityDrugDTO;
+import com.fujitsu.mmp.msusermanagement.dto.drug.DrugDTO;
+import com.fujitsu.mmp.msusermanagement.dto.drug.filters.FilterDrugDTO;
+import com.fujitsu.mmp.msusermanagement.apis.pandrugsapi.DrugResponse;
+import com.fujitsu.mmp.msusermanagement.apis.pandrugsapi.SourceNameResponse;
 import com.fujitsu.mmp.msusermanagement.entities.AlternativeNames;
 import com.fujitsu.mmp.msusermanagement.entities.Drug;
 import com.fujitsu.mmp.msusermanagement.entities.DrugHistory;
-import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.mappers.DrugMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.DrugHistoryRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.DrugRepository;
-import org.bson.types.ObjectId;
+import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -41,6 +39,9 @@ public class DrugService {
 
     @Autowired
     private DrugMapper drugMapper;
+
+    @Autowired
+    private JWTUtility jwtUtility;
 
     @Autowired
     public DrugService(WebClient.Builder webClientBuilder) {
@@ -253,10 +254,22 @@ public class DrugService {
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 
-    public ResponseEntity<?> setAvailable(AvailabilityDrugDTO availabilityDrugDTO) {
+    public ResponseEntity<?> setAvailable(AvailabilityDrugDTO availabilityDrugDTO, HttpServletRequest httpServletRequest) {
         HttpStatus responseStatus = HttpStatus.OK;
+        List<Drug> responseBody;
 
-        List<Drug> responseBody = drugRepository.findByStandardNameIn(availabilityDrugDTO.getStandardName());
+        String token = httpServletRequest.getHeader("Authorization");
+        String username = "";
+
+        if(token != null) {
+            username = jwtUtility.getUsernameFromToken(token.substring(6));
+        }
+
+        if(availabilityDrugDTO.getIsAllSelected()) {
+            responseBody = drugRepository.findDrugsByFiltersWithNoPage(availabilityDrugDTO.getFilters());
+        } else {
+            responseBody = drugRepository.findByStandardNameIn(availabilityDrugDTO.getStandardName());
+        }
 
         if (availabilityDrugDTO.getIsAvailable() == null) {
             responseStatus = HttpStatus.UNPROCESSABLE_ENTITY;
@@ -264,37 +277,41 @@ public class DrugService {
             responseStatus = HttpStatus.NOT_FOUND;
         } else {
             List<DrugHistory> drugHistoryList = new ArrayList<>();
+
+            String finalUsername = username;
+
             List<Drug> drugList = responseBody.stream()
-                .filter(drug -> drug.getAvailable() != availabilityDrugDTO.getIsAvailable())
-                .map(drug -> {
-                Drug drugToUpdate = drug;
-                DrugHistory drugToHistory = new DrugHistory();
+                    .filter(drug -> drug.getAvailable() != availabilityDrugDTO.getIsAvailable())
+                    .map(drug -> {
+                        Drug drugToUpdate = drug;
+                        DrugHistory drugToHistory = new DrugHistory();
 
-                drugToHistory.setStandardName(drug.getStandardName());
-                drugToHistory.setCommonName(drug.getCommonName());
-                drugToHistory.setAlternativeNames(drug.getAlternativeNames());
-                drugToHistory.setCreationDate(drug.getCreationDate());
-                drugToHistory.setAvailable(drug.getAvailable());
-                drugToHistory.setCost(drug.getCost());
-                drugToHistory.setVersion(drug.getVersion());
-                drugToHistory.setDeletionDate(new Date());
-                drugToHistory.setPreviousVersion(drug.getPreviousVersion());
-                drugToHistory.setUserId(availabilityDrugDTO.getUserId());
+                        drugToHistory.setStandardName(drug.getStandardName());
+                        drugToHistory.setCommonName(drug.getCommonName());
+                        drugToHistory.setAlternativeNames(drug.getAlternativeNames());
+                        drugToHistory.setCreationDate(drug.getCreationDate());
+                        drugToHistory.setAvailable(drug.getAvailable());
+                        drugToHistory.setCost(drug.getCost());
+                        drugToHistory.setVersion(drug.getVersion());
+                        drugToHistory.setDeletionDate(new Date());
+                        drugToHistory.setPreviousVersion(drug.getPreviousVersion());
+                        drugToHistory.setUserId(finalUsername);
 
-                drugToUpdate.setAvailable(availabilityDrugDTO.getIsAvailable());
-                drugToUpdate.setPreviousVersion(drug.getVersion());
-                drugToUpdate.setCreationDate(new Date());
-                drugToUpdate.setId(drug.getId());
-                drugToUpdate.setVersion(drug.getVersion());
+                        drugToUpdate.setAvailable(availabilityDrugDTO.getIsAvailable());
+                        drugToUpdate.setPreviousVersion(drug.getVersion());
+                        drugToUpdate.setCreationDate(new Date());
+                        drugToUpdate.setId(drug.getId());
+                        drugToUpdate.setVersion(drug.getVersion());
 
-                drugHistoryList.add(drugToHistory);
+                        drugHistoryList.add(drugToHistory);
 
-                return drugToUpdate;
-            }).collect(Collectors.toList());
+                        return drugToUpdate;
+                    }).collect(Collectors.toList());
 
-            drugHistoryRepostory.saveAll(drugHistoryList);
-            drugRepository.saveAll(drugList);
-        }
+                drugHistoryRepostory.saveAll(drugHistoryList);
+                drugRepository.saveAll(drugList);
+            }
+
 
         return new ResponseEntity<>(responseBody, responseStatus);
 

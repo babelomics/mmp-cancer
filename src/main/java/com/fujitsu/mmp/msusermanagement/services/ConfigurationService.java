@@ -1,6 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
-import com.fujitsu.mmp.msusermanagement.dto.ConfigurationDTO;
+import com.fujitsu.mmp.msusermanagement.dto.configuration.ConfigurationDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Configuration;
 import com.fujitsu.mmp.msusermanagement.mappers.ConfigurationMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.ConfigurationRepository;
@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -28,7 +29,7 @@ public class ConfigurationService {
     ConfigurationMapper configurationMapper;
 
     @Autowired
-    CellBaseService cellBaseService;
+    GenomicDictionaryService genomicDictionaryService;
 
     @Autowired
     PandrugService pandrugService;
@@ -36,7 +37,7 @@ public class ConfigurationService {
     @Autowired
     JWTUtility jwtUtility;
 
-    public ResponseEntity<?> getConfiguration(HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> getConfiguration(HttpServletRequest httpServletRequest) throws IOException {
         String authorization = httpServletRequest.getHeader("Authorization");
         ConfigurationDTO responseBody = new ConfigurationDTO();
         HttpStatus responseStatus = HttpStatus.OK;
@@ -64,9 +65,9 @@ public class ConfigurationService {
     }
 
 
-    public ResponseEntity<ConfigurationDTO> updateConfiguration(ConfigurationDTO configurationDTO, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> updateConfiguration(ConfigurationDTO configurationDTO, HttpServletRequest httpServletRequest) throws IOException {
         HttpStatus responseStatus = HttpStatus.OK;
-        ConfigurationDTO responseBody = null;
+        Boolean isConfigured = false;
 
         String token = httpServletRequest.getHeader("Authorization");
         String username = "";
@@ -83,12 +84,14 @@ public class ConfigurationService {
             Configuration entityToSave = configurationMapper.dtoToEntity(configurationDTO);
             entityToSave.setId(entity.getId());
             entityToSave = configurationRepository.save(entityToSave);
-            responseBody = configurationMapper.entityToDto(entityToSave);
+            if (isConfiguratedOK()) {
+                isConfigured = true;
+            }
         }
 
         logger.info("Configuration updated by: "+username+" on "+ new Date());
 
-        return new ResponseEntity<>(responseBody, responseStatus);
+        return new ResponseEntity<>(isConfigured, responseStatus);
     }
 
     public ResponseEntity<ConfigurationDTO> updateContactAdmin(ConfigurationDTO configurationDTO, HttpServletRequest httpServletRequest) {
@@ -111,7 +114,7 @@ public class ConfigurationService {
             entityToSave.setPandrugPassword(entity.getPandrugPassword());
             entityToSave.setPandrugURL(entity.getPandrugURL());
             entityToSave.setPandrugUser(entity.getPandrugUser());
-            entityToSave.setCellbaseURL(entity.getCellbaseURL());
+            entityToSave.setGenomicDictionaryURL(entity.getGenomicDictionaryURL());
             entityToSave.setSetupInformation(entity.getSetupInformation());
             entityToSave.setId(entity.getId());
             entityToSave = configurationRepository.save(entityToSave);
@@ -123,7 +126,7 @@ public class ConfigurationService {
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 
-    private Boolean isConfiguratedOK() {
+    private Boolean isConfiguratedOK() throws IOException {
         List<Configuration> configurationList = configurationRepository.findAll();
         Configuration configuration = null;
         if(!configurationList.isEmpty()) {
@@ -133,7 +136,7 @@ public class ConfigurationService {
         if(configuration == null) {
             return false;
         } else {
-            if(!cellBaseService.isValid(configuration.getCellbaseURL())){
+            if(!genomicDictionaryService.isValid(configuration.getGenomicDictionaryURL())){
                 return false;
             }else{
                 if(!pandrugService.isValid(configuration.getPandrugURL(), configuration.getPandrugUser(),

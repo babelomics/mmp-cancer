@@ -1,7 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
-import com.fujitsu.mmp.msusermanagement.dto.NotificationDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.notification.NotificationDTO;
 import com.fujitsu.mmp.msusermanagement.services.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

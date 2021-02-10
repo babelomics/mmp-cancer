@@ -1,6 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserHistoryDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserHistoryDTO;
 import com.fujitsu.mmp.msusermanagement.entities.UserHistory;
 import com.fujitsu.mmp.msusermanagement.mappers.UserHistoryMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.UserHistoryRepository;

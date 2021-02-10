@@ -1,7 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.mappers;
 
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
-import com.fujitsu.mmp.msusermanagement.dto.filters.FilterUserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserDTO;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;

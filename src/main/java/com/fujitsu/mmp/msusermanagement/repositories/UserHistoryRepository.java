@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserHistoryRepository extends MongoRepository<UserHistory, String> {
     UserHistory findByIdentifier(String identifier);
+
+    boolean existsByIdentifier(String author);
 }

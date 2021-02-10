@@ -2,10 +2,9 @@ package com.fujitsu.mmp.msusermanagement.controllers;
 
 
 
-import com.fujitsu.mmp.msusermanagement.dto.AvailabilityDrugDTO;
-import com.fujitsu.mmp.msusermanagement.dto.DrugDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
-import com.fujitsu.mmp.msusermanagement.dto.filters.FilterDrugDTO;
+import com.fujitsu.mmp.msusermanagement.dto.drug.AvailabilityDrugDTO;
+import com.fujitsu.mmp.msusermanagement.dto.drug.DrugDTO;
+import com.fujitsu.mmp.msusermanagement.dto.drug.filters.FilterDrugDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Drug;
 import com.fujitsu.mmp.msusermanagement.services.DrugService;
 import io.swagger.annotations.ApiImplicitParam;
@@ -17,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @CrossOrigin(origins = "*", maxAge = 3600, exposedHeaders = "Authorization")
@@ -52,8 +52,8 @@ public class DrugController {
      * @return
      */
     @PutMapping("/updateAvailability")
-    public ResponseEntity<?> setAvailable (@RequestBody AvailabilityDrugDTO availabilityDrugDTO) {
-        return drugService.setAvailable(availabilityDrugDTO);
+    public ResponseEntity<?> setAvailable (@RequestBody AvailabilityDrugDTO availabilityDrugDTO, HttpServletRequest httpServletRequest) {
+        return drugService.setAvailable(availabilityDrugDTO, httpServletRequest);
     }
 
     /**

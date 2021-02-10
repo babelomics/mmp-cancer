@@ -1,16 +1,15 @@
 package com.fujitsu.mmp.msusermanagement.controllers;
 
-import com.fujitsu.mmp.msusermanagement.dto.ConfigurationDTO;
-import com.fujitsu.mmp.msusermanagement.dto.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.configuration.ConfigurationDTO;
 import com.fujitsu.mmp.msusermanagement.services.ConfigurationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "*", maxAge = 3600, exposedHeaders = "Authorization")
 @RequestMapping("/api/configuration")
 @RestController
 public class ConfigurationController {
@@ -24,7 +23,7 @@ public class ConfigurationController {
      * get the whole configuration.
      */
     @GetMapping
-    public ResponseEntity<?> getConfiguration (HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> getConfiguration (HttpServletRequest httpServletRequest) throws IOException {
         return configurationService.getConfiguration(httpServletRequest);
     }
 
@@ -34,7 +33,7 @@ public class ConfigurationController {
      * @return configuration object updated.
      */
     @PutMapping
-    public ResponseEntity<ConfigurationDTO> updateConfiguration (@RequestBody ConfigurationDTO configurationDTO, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> updateConfiguration (@RequestBody ConfigurationDTO configurationDTO, HttpServletRequest httpServletRequest) throws IOException {
         return configurationService.updateConfiguration(configurationDTO, httpServletRequest);
     }
 
