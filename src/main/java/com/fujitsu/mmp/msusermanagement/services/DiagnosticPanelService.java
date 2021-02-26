@@ -1,5 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
+import com.fujitsu.mmp.msusermanagement.apis.genomicdictionaryapi.*;
 import com.fujitsu.mmp.msusermanagement.constants.ESource;
 import com.fujitsu.mmp.msusermanagement.constants.EStatus;
 import com.fujitsu.mmp.msusermanagement.constants.EType;
@@ -7,16 +8,12 @@ import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.DiagnosticPanelDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.DiagnosticPanelParentChildDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.DiagnosticPanelTabsDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.filters.FilterDiagnosticPanelDTO;
-import com.fujitsu.mmp.msusermanagement.apis.genomicdictionaryapi.*;
 import com.fujitsu.mmp.msusermanagement.entities.*;
 import com.fujitsu.mmp.msusermanagement.mappers.DiagnosticPanelMapper;
 import com.fujitsu.mmp.msusermanagement.mappers.DiagnosticPanelParentChildMapper;
 import com.fujitsu.mmp.msusermanagement.mappers.RegionMapper;
 import com.fujitsu.mmp.msusermanagement.mappers.VariantMapper;
-import com.fujitsu.mmp.msusermanagement.repositories.DiagnosticPanelRepository;
-import com.fujitsu.mmp.msusermanagement.repositories.DiagnosticPanelSetRepository;
-import com.fujitsu.mmp.msusermanagement.repositories.RegionRepository;
-import com.fujitsu.mmp.msusermanagement.repositories.VariantRepository;
+import com.fujitsu.mmp.msusermanagement.repositories.*;
 import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -63,6 +60,12 @@ public class DiagnosticPanelService {
     @Autowired
     VariantMapper variantMapper;
 
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    UserHistoryRepository userHistoryRepository;
+
     public ResponseEntity<Page<DiagnosticPanelDTO>> listDiagnosticPanelSet(Pageable pageable, FilterDiagnosticPanelDTO filterDiagnosticPanelDTO, String diagnosticPanelSetIdentifier) {
 
         HttpStatus responseStatus = HttpStatus.OK;
@@ -85,16 +88,12 @@ public class DiagnosticPanelService {
 
             List<DiagnosticPanelDTO> diagnosticPanelDTOList = diagnosticPanelMapper.listEntityToListDto(pageEntity.getContent());
 
-            diagnosticPanelDTOList.stream().forEach(diagnosticPanelDTO -> {
+            diagnosticPanelDTOList.forEach(diagnosticPanelDTO -> {
 
-                diagnosticPanelDTO.setGenessNumber(diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.GENE))
-                        .collect(Collectors.toList()).size());
-                diagnosticPanelDTO.setTranscNumber(diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.TRANSCRIPT))
-                        .collect(Collectors.toList()).size());
-                diagnosticPanelDTO.setRegionsNumber(diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.REGION))
-                        .collect(Collectors.toList()).size());
-                diagnosticPanelDTO.setVariantsNumber(diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.VARIANT))
-                        .collect(Collectors.toList()).size());
+                diagnosticPanelDTO.setGenessNumber((int) diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.GENE)).count());
+                diagnosticPanelDTO.setTranscNumber((int) diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.TRANSCRIPT)).count());
+                diagnosticPanelDTO.setRegionsNumber((int) diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.REGION)).count());
+                diagnosticPanelDTO.setVariantsNumber((int) diagnosticPanelDTO.getFeatures().stream().filter(diagnosticPanelFeature -> diagnosticPanelFeature.getType().equals(EType.VARIANT)).count());
                 diagnosticPanelDTO.setAscendingPanels(diagnosticPanelDTO.getParentIds() != null && diagnosticPanelDTO.getParentIds().size() != 0);
 
                 diagnosticPanelDTO.setDescendingPanels(listOfAllParents.contains(diagnosticPanelDTO.getDiagnosticPanelIdentifier()));
@@ -191,7 +190,7 @@ public class DiagnosticPanelService {
 
     private void createDescendantsFromDiagnosticPanelTabsDTO(DiagnosticPanelTabsDTO diagnosticPanelTabsDTO) {
 
-        diagnosticPanelTabsDTO.getDescendants().stream()
+        diagnosticPanelTabsDTO.getDescendants()
                 .forEach(descendantPanel -> {
                             DiagnosticPanel panel = diagnosticPanelRepository.findDiagnosticPanelByDiagnosticPanelSetIdentifierAndDiagnosticPanelIdentifierAndStatus(
                                     diagnosticPanelTabsDTO.getDiagnosticPanelSetIdentifier(), descendantPanel.getDiagnosticPanelIdentifier(), EStatus.CURRENT);
@@ -225,7 +224,7 @@ public class DiagnosticPanelService {
     private List<String> getParentIdsFromDiagnosticPanelTabsDTO(DiagnosticPanelTabsDTO diagnosticPanelTabsDTO) {
         List<String> parentIds = new ArrayList<>();
 
-        diagnosticPanelTabsDTO.getAscendants().stream().forEach(
+        diagnosticPanelTabsDTO.getAscendants().forEach(
                 diagnosticPanelParentChildDTO ->
                         parentIds.add(diagnosticPanelParentChildDTO.getDiagnosticPanelIdentifier())
         );
@@ -235,7 +234,7 @@ public class DiagnosticPanelService {
     private Set<DiagnosticPanelAssociation> getDiagnosticPanelAssociationFromDiagnosticPanelTabsDTO(DiagnosticPanelTabsDTO diagnosticPanelTabsDTO) {
         Set<DiagnosticPanelAssociation> diagnosticPanelAssociationSet = new HashSet<>();
 
-        diagnosticPanelTabsDTO.getIcd10List().stream().forEach(
+        diagnosticPanelTabsDTO.getIcd10List().forEach(
                 icd10 -> {
                     DiagnosticPanelAssociation diagnosticPanelAssociation = new DiagnosticPanelAssociation();
                     diagnosticPanelAssociation.setSource(ESource.ICD10);
@@ -244,7 +243,7 @@ public class DiagnosticPanelService {
                 }
         );
 
-        diagnosticPanelTabsDTO.getHpoList().stream().forEach(
+        diagnosticPanelTabsDTO.getHpoList().forEach(
                 hpo -> {
                     DiagnosticPanelAssociation diagnosticPanelAssociation = new DiagnosticPanelAssociation();
                     diagnosticPanelAssociation.setSource(ESource.HPO);
@@ -331,7 +330,7 @@ public class DiagnosticPanelService {
                     region.setRegionIdentifier(temp.getRegionIdentifier());
                     region.setChromosomeSequence(temp.getChromosome());
                     region.setInitPosition(temp.getInitPosition());
-                    region.setEndPosition(String.valueOf(Integer.valueOf(temp.getEndPosition()) + 1));
+                    region.setEndPosition(String.valueOf(Integer.parseInt(temp.getEndPosition()) + 1));
                     return region;
                 })
                 .collect(Collectors.toList());
@@ -414,7 +413,7 @@ public class DiagnosticPanelService {
                         geneList.add(g);
                     });
 
-            descendantDiagnosticPanels.stream().forEach(
+            descendantDiagnosticPanels.forEach(
                     diagnosticPanel -> diagnosticPanel.getFeatures().stream().filter(diagnosticPanelFeature ->
                             diagnosticPanelFeature.getType().equals(EType.GENE))
                             .forEach(diagnosticPanelFeature -> {
@@ -442,7 +441,7 @@ public class DiagnosticPanelService {
                         transcriptList.add(t);
                     });
 
-            descendantDiagnosticPanels.stream().forEach(
+            descendantDiagnosticPanels.forEach(
                     diagnosticPanel -> diagnosticPanel.getFeatures().stream().filter(diagnosticPanelFeature ->
                             diagnosticPanelFeature.getType().equals(EType.TRANSCRIPT))
                             .forEach(diagnosticPanelFeature -> {
@@ -485,11 +484,13 @@ public class DiagnosticPanelService {
                         Region region = regionRepository.findByRegionIdentifier(diagnosticPanel.getDiagnosticPanelFeatureIdentifier());
                         if (region != null) {
                             RegionDTO regionDTO = regionMapper.entityToDTO(region);
-                            Integer aux = Integer.valueOf(regionDTO.getEndPosition());
+                            int aux = Integer.parseInt(regionDTO.getEndPosition());
                             regionDTO.setEndPosition(Integer.toString(aux - 1));
                             regionList.add(regionDTO);
                         }
                     });
+
+            regionList.sort(Comparator.comparing(RegionDTO::getChromosome, DiagnosticPanelService::customComparator));
 
             List<VariantDTO> variantList = new ArrayList<>();
 
@@ -504,7 +505,9 @@ public class DiagnosticPanelService {
 
                     });
 
-            descendantDiagnosticPanels.stream().forEach(
+            variantList.sort(Comparator.comparing(VariantDTO::getChromosomeSequence, DiagnosticPanelService::customComparator));
+
+            descendantDiagnosticPanels.forEach(
                     diagnosticPanel -> diagnosticPanel.getFeatures().stream().filter(diagnosticPanelFeature ->
                             diagnosticPanelFeature.getType().equals(EType.VARIANT))
                             .forEach(diagnosticPanelFeature -> {
@@ -518,7 +521,7 @@ public class DiagnosticPanelService {
             responseBody.setDiagnosticPanelIdentifier(entity.getDiagnosticPanelIdentifier());
             responseBody.setName(entity.getName());
             responseBody.setDescription(entity.getDescription());
-            responseBody.setAuthor(entity.getAuthor());
+            responseBody.setAuthor(getFormattedAuthor(entity.getAuthor()));
             responseBody.setCreationDate(entity.getCreationDate());
             responseBody.setDeletionDate(entity.getDeletionDate());
             responseBody.setDiagnosticPanelSetIdentifier(entity.getDiagnosticPanelSetIdentifier());
@@ -588,7 +591,7 @@ public class DiagnosticPanelService {
                     .findDiagnosticPanelByDiagnosticPanelSetIdentifierAndDiagnosticPanelIdentifierAndStatus(diagnosticPanelSetIdentifier, temp, EStatus.CURRENT);
             
             if(toDeleteChildren) {
-                deleteTransverse(diagnosticPanelAux.getDiagnosticPanelIdentifier(), diagnosticPanelSetIdentifier, toDeleteChildren);
+                deleteTransverse(diagnosticPanelAux.getDiagnosticPanelIdentifier(), diagnosticPanelSetIdentifier, true);
             } else {
                 deleteAndCreateNewVersionDiagnosticPanel(diagnosticPanel.getDiagnosticPanelIdentifier(), diagnosticPanelAux);
             }
@@ -599,7 +602,7 @@ public class DiagnosticPanelService {
 
         Set<DiagnosticPanelFeature> diagnosticPanelFeatureSet = new HashSet<>();
 
-        diagnosticPanelTabsDTO.getGeneList().stream().forEach(
+        diagnosticPanelTabsDTO.getGeneList().forEach(
                 gene -> {
                     DiagnosticPanelFeature diagnosticPanelFeature = new DiagnosticPanelFeature();
                     diagnosticPanelFeature.setDiagnosticPanelFeatureIdentifier(gene.getGeneId());
@@ -608,7 +611,7 @@ public class DiagnosticPanelService {
                 }
         );
 
-        diagnosticPanelTabsDTO.getTranscriptList().stream().forEach(
+        diagnosticPanelTabsDTO.getTranscriptList().forEach(
                 transcript -> {
                     DiagnosticPanelFeature diagnosticPanelFeature = new DiagnosticPanelFeature();
                     diagnosticPanelFeature.setDiagnosticPanelFeatureIdentifier(transcript.getTranscriptId());
@@ -617,7 +620,7 @@ public class DiagnosticPanelService {
                 }
         );
 
-        diagnosticPanelTabsDTO.getVariantList().stream().forEach(
+        diagnosticPanelTabsDTO.getVariantList().forEach(
                 variant -> {
                     DiagnosticPanelFeature diagnosticPanelFeature = new DiagnosticPanelFeature();
                     diagnosticPanelFeature.setDiagnosticPanelFeatureIdentifier(variant.getVariantIdentifier());
@@ -626,7 +629,7 @@ public class DiagnosticPanelService {
                 }
         );
 
-        diagnosticPanelTabsDTO.getRegionList().stream().forEach(
+        diagnosticPanelTabsDTO.getRegionList().forEach(
                 region -> {
                     DiagnosticPanelFeature diagnosticPanelFeature = new DiagnosticPanelFeature();
                     diagnosticPanelFeature.setDiagnosticPanelFeatureIdentifier(region.getRegionIdentifier());
@@ -638,8 +641,9 @@ public class DiagnosticPanelService {
         return diagnosticPanelFeatureSet;
     }
 
-    private Boolean isHuman(String assemblyAccession) {
-        MetaAssembly metaAssembly = genomicDictionaryService.getEnsemlReleaseMeta(assemblyAccession);
+
+    private Boolean isHuman (String assemblyAccession) {
+        MetaAssembly metaAssembly = genomicDictionaryService.getMetaAssembly(assemblyAccession);
         return metaAssembly.getAssembly().getSpecies().getTaxonomyId().equals(9606);
     }
 
@@ -654,36 +658,35 @@ public class DiagnosticPanelService {
     }
 
     private void setDescendantList(String panelSetId, String panelId, DiagnosticPanelTabsDTO diagnosticPanelTabObject) {
-        List<DiagnosticPanel> ascendantsPanelList = diagnosticPanelRepository
-                .findDiagnosticPanelByParentIdsAndDiagnosticPanelSetIdentifier(panelId, panelSetId);
 
-        List<String> ascendantPanelsIdsList = ascendantsPanelList.stream()
+        List<String> currentDescendantPanelsIdsList = diagnosticPanelRepository
+                .findDiagnosticPanelByParentIdsAndDiagnosticPanelSetIdentifierAndStatus(panelId, panelSetId, EStatus.CURRENT)
+                .stream()
                 .map(DiagnosticPanel::getDiagnosticPanelIdentifier)
                 .collect(Collectors.toList());
 
-        List<String> newAscendantPanelsIdsList = diagnosticPanelTabObject.getDescendants().stream()
+        List<String> newDescendantPanelsIdsList = diagnosticPanelTabObject.getDescendants().stream()
                 .map(DiagnosticPanelParentChildDTO::getDiagnosticPanelIdentifier)
                 .collect(Collectors.toList());
 
         List<String> panelsToDeleteIdsList = diagnosticPanelTabObject.getDescendants().stream()
-                .peek(temp -> {
-                    temp.setToDelete(temp.getToDelete() != null);
-                })
+                .peek(temp -> temp.setToDelete(temp.getToDelete() != null))
                 .filter(DiagnosticPanelParentChildDTO::getToDelete)
                 .map(DiagnosticPanelParentChildDTO::getDiagnosticPanelIdentifier)
                 .collect(Collectors.toList());
 
-        setNewPanels(panelSetId, panelId, ascendantPanelsIdsList, newAscendantPanelsIdsList);
+        setNewPanels(panelSetId, panelId, currentDescendantPanelsIdsList, newDescendantPanelsIdsList);
 
-        setRootPanels(panelSetId, panelId, ascendantPanelsIdsList, newAscendantPanelsIdsList);
+        setRootPanels(panelSetId, panelId, currentDescendantPanelsIdsList, newDescendantPanelsIdsList);
 
-        setDeletePanels(panelSetId, panelsToDeleteIdsList);
-
+        if(panelsToDeleteIdsList.size() > 1) {
+            setDeletePanels(panelSetId, panelsToDeleteIdsList);
+        }
     }
 
-    private void setNewPanels(String panelSetId, String panelId, List<String> ascendantPanelsIdsList, List<String> newAscendantPanelsIdsList) {
-        List<String> newPanels = newAscendantPanelsIdsList.stream()
-                .filter(element -> !ascendantPanelsIdsList.contains(element))
+    private void setNewPanels(String panelSetId, String panelId, List<String> currentDescendantPanelsIdsList, List<String> newDescendantPanelsIdsList) {
+        List<String> newPanels = newDescendantPanelsIdsList.stream()
+                .filter(element -> !currentDescendantPanelsIdsList.contains(element))
                 .collect(Collectors.toList());
 
         newPanels.forEach(auxPanelId -> {
@@ -716,9 +719,9 @@ public class DiagnosticPanelService {
         });
     }
 
-    private void setRootPanels(String panelSetId, String panelId, List<String> ascendantPanelsIdsList, List<String> newAscendantPanelsIdsList) {
-        List<String> rootPanels = ascendantPanelsIdsList.stream()
-                .filter(element -> !newAscendantPanelsIdsList.contains(element))
+    private void setRootPanels(String panelSetId, String panelId, List<String> currentDescendantPanelsIdsList, List<String> newDescendantPanelsIdsList) {
+        List<String> rootPanels = currentDescendantPanelsIdsList.stream()
+                .filter(element -> !newDescendantPanelsIdsList.contains(element))
                 .collect(Collectors.toList());
 
         rootPanels.forEach(auxPanelId -> {
@@ -820,6 +823,7 @@ public class DiagnosticPanelService {
         });
     }
 
+
     private void deletePanel(DiagnosticPanel diagnosticPanel) {
         diagnosticPanel.setDeletionDate(new Date());
         diagnosticPanel.setStatus(EStatus.ARCHIVED);
@@ -849,5 +853,67 @@ public class DiagnosticPanelService {
         newPanel.setPreviousVersion(diagnosticPanel.getGuid());
 
         diagnosticPanelRepository.save(newPanel);
+    }
+
+    private static int customComparator(String s1, String s2) {
+
+        String[] pt1 = s1.split("((?<=[a-z])(?=[0-9]))|((?<=[0-9])(?=[a-z]))");
+        String[] pt2 = s2.split("((?<=[a-z])(?=[0-9]))|((?<=[0-9])(?=[a-z]))");
+
+        int i = 0;
+        if(Arrays.equals(pt1, pt2)) {
+            return 0;
+        }else{
+            for(i=0;i<Math.min(pt1.length, pt2.length);i++)
+                if(!pt1[i].equals(pt2[i])) {
+                    if(!isNumber(pt1[i],pt2[i])) {
+                        if(pt1[i].compareTo(pt2[i])>0) {
+                            return 1;
+                        }else{
+                            return -1;
+                        }
+                    } else {
+                        int nu1 = Integer.parseInt(pt1[i]);
+                        int nu2 = Integer.parseInt(pt2[i]);
+                        if(nu1>nu2) {
+                            return 1;
+                        } else {
+                            return -1;
+                        }
+                    }
+                }
+        }
+
+        if(pt1.length>i) {
+            return 1;
+        }else{
+            return -1;
+        }
+    }
+
+    private static Boolean isNumber(String n1, String n2) {
+        try {
+            Integer.parseInt(n1);
+            Integer.parseInt(n2);
+            return true;
+        }
+        catch(Exception x) {
+            return false;
+        }
+    }
+
+    private String getFormattedAuthor (String username){
+        String formattedAuthor = "";
+        if(username != null){
+            User user = userRepository.findByIdentifier(username);
+
+            if(user == null) {
+                UserHistory userHistory = userHistoryRepository.findByIdentifier(username);
+                formattedAuthor = userHistory != null ? userHistory.getIdentifier() + " - " + userHistory.getFirstName() + " " + userHistory.getLastName() : "Undefined";
+            }else{
+                formattedAuthor =  user.getIdentifier() + " - " + user.getFirstName() + " " + user.getLastName();
+            }
+        }
+        return formattedAuthor;
     }
 }

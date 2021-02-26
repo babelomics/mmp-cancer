@@ -2,8 +2,10 @@ package com.fujitsu.mmp.msusermanagement.services;
 
 import com.fujitsu.mmp.msusermanagement.dto.configuration.ConfigurationDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Configuration;
+import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.mappers.ConfigurationMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.ConfigurationRepository;
+import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
 import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,23 +37,30 @@ public class ConfigurationService {
     PandrugService pandrugService;
 
     @Autowired
+    UserRepository userRepository;
+
+    @Autowired
     JWTUtility jwtUtility;
 
     public ResponseEntity<?> getConfiguration(HttpServletRequest httpServletRequest) throws IOException {
         String authorization = httpServletRequest.getHeader("Authorization");
         ConfigurationDTO responseBody = new ConfigurationDTO();
+        User contactUser = null;
+
         HttpStatus responseStatus = HttpStatus.OK;
         List<Configuration> configurationList = configurationRepository.findAll();
+
         Configuration configuration = null;
 
         if(!configurationList.isEmpty()){
             configuration = configurationList.get(0);
+            contactUser = userRepository.findByIdentifier(configuration.getContactIdentifier());
         }
         
         if(authorization == null){
             if(isConfiguratedOK()){
                 responseBody.setSetupInformation(configuration.getSetupInformation());
-                responseBody.setContactEmail(configuration.getContactEmail());
+                responseBody.setContactEmail(contactUser.getEmail());
             }else{
                 return new ResponseEntity<>(
                         "Error: The application is not configured yet.",
@@ -59,6 +68,9 @@ public class ConfigurationService {
             }
         }else{
             responseBody = configurationMapper.entityToDto(configuration);
+            responseBody.setContactEmail(contactUser.getEmail());
+            responseBody.setContactName(contactUser.getFirstName());
+            responseBody.setContactLastName(contactUser.getLastName());
         }
 
         return new ResponseEntity<>(responseBody, responseStatus);
@@ -83,7 +95,8 @@ public class ConfigurationService {
         } else {
             Configuration entityToSave = configurationMapper.dtoToEntity(configurationDTO);
             entityToSave.setId(entity.getId());
-            entityToSave = configurationRepository.save(entityToSave);
+            configurationRepository.save(entityToSave);
+
             if (isConfiguratedOK()) {
                 isConfigured = true;
             }
@@ -107,6 +120,7 @@ public class ConfigurationService {
 
         List<Configuration> entityList = configurationRepository.findAll();
         Configuration entity = entityList.get(0);
+
         if (entityList.isEmpty()) {
             responseStatus = HttpStatus.NOT_FOUND;
         } else {

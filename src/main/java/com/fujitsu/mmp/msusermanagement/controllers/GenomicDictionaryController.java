@@ -60,7 +60,7 @@ public class GenomicDictionaryController {
      */
     @GetMapping("/ensembl/{assemblyAccession}/meta")
     public MetaAssembly getEnsemblReleaseMeta(@PathVariable String assemblyAccession) {
-        return genomicDictionaryService.getEnsemlReleaseMeta(assemblyAccession);
+        return genomicDictionaryService.getMetaAssembly(assemblyAccession);
     }
 
     /**
@@ -149,7 +149,7 @@ public class GenomicDictionaryController {
      * @return
      */
     @GetMapping("/assemblies/{assemblyAccession}/regions/{regions}/{start}/{end}/check")
-    public String checkRegion (@PathVariable String assemblyAccession, @PathVariable String regions,
+    public ResponseEntity<String> checkRegion (@PathVariable String assemblyAccession, @PathVariable String regions,
                                              @PathVariable String start, @PathVariable String end,
                                              @RequestParam Optional<String> schemaVersion) {
         return genomicDictionaryService.checkRegion(assemblyAccession, regions, start, end, schemaVersion);

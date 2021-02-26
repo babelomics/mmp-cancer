@@ -24,22 +24,22 @@ import java.util.List;
 public class UserRegistryRequestService {
 
     @Autowired
-    private NotificationService notificationService;
+    NotificationService notificationService;
 
     @Autowired
-    private EmailServiceImpl emailService;
+    EmailServiceImpl emailService;
 
     @Autowired
-    private UserMapper userMapper;
+    UserMapper userMapper;
 
     @Autowired
-    private UserRepository userRepository;
+    UserRepository userRepository;
 
     @Autowired
-    private  UserRegistryRequestRepository userRegistryRequestRepository;
+    UserRegistryRequestRepository userRegistryRequestRepository;
 
     @Autowired
-    private  UserRegistryRequestMapper userRegistryRequestMapper;
+    UserRegistryRequestMapper userRegistryRequestMapper;
 
     public ResponseEntity<?> createUserRegistryRequest(UserRegistryRequestDTO userRegistryRequestDTO) {
         HttpStatus responseStatus = HttpStatus.CREATED;

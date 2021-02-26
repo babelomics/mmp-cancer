@@ -4,7 +4,6 @@ import com.fujitsu.mmp.msusermanagement.entities.Configuration;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.repositories.ConfigurationRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
-import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,25 +51,26 @@ public class SetupDataLoader implements
 
         if (mongoTemplate.getCollectionNames().isEmpty()) {
             mongoTemplate.createCollection("users");
-            User adminUser = new User();
-            adminUser.setIdentifier("admin");
 
+            User adminUser = new User();
+
+            adminUser.setIdentifier("admin");
             adminUser.setPassword(encoder.encode("admin"));
             adminUser.setEmail("noreply.mmpcancer@gmail.com");
+            adminUser.setFirstName("Admin");
+            adminUser.setLastName("Admin");
+            adminUser.setOrganization("Admin Organization");
             adminUser.setUserType("Admin");
 
             userRepository.save(adminUser);
 
-            mongoTemplate.createCollection("usersHistory");
-            mongoTemplate.createCollection("usersRegistryRequests");
-            mongoTemplate.createCollection("permissions");
-            mongoTemplate.createCollection("notifications");
-            mongoTemplate.createCollection("drugHistory");
-
             mongoTemplate.createCollection("configurations");
+
             Configuration configuration = new Configuration();
+
             configuration.setPandrugURL(PANDRUGS_BASE_URL);
             configuration.setGenomicDictionaryURL(GENOMIC_DICTIONARY_BASE_URL);
+
             configurationRepository.save(configuration);
         }
 

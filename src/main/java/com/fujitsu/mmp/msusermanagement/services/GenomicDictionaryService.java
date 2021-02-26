@@ -1,6 +1,9 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
+
 import com.fujitsu.mmp.msusermanagement.apis.genomicdictionaryapi.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -20,6 +24,8 @@ import java.util.Optional;
 public class GenomicDictionaryService {
 
     private final WebClient webClient;
+
+    private static final Logger log = LoggerFactory.getLogger(GenomicDictionaryService.class);
 
     @Autowired
     public GenomicDictionaryService(WebClient.Builder webClientBuilder) {
@@ -97,6 +103,16 @@ public class GenomicDictionaryService {
             .block();
     }
 
+    public MetaAssembly getMetaAssembly(String assemblyAccession) {
+        return this.webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/assemblies/{assemblyAccession}/meta")
+                        .build(assemblyAccession))
+                .retrieve()
+                .bodyToMono(MetaAssembly.class)
+                .block();
+    }
+
     public String getEnsemlRelease(String assemblyAccession) {
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -107,16 +123,6 @@ public class GenomicDictionaryService {
                 .block();
     }
 
-    public MetaAssembly getEnsemlReleaseMeta(String assemblyAccession) {
-        return this.webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/assemblies/{assemblyAccession}/meta")
-                        .build(assemblyAccession))
-                .retrieve()
-                .bodyToMono(MetaAssembly.class)
-                .block();
-    }
-
     public ICD10 getICD10(String termId) {
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -124,6 +130,8 @@ public class GenomicDictionaryService {
                         .build(termId))
                 .retrieve()
                 .bodyToMono(ICD10.class)
+                .doOnError(error -> log.error("[IMPORT ERROR]: Invalid ICD-10: "+termId, error.getMessage()))
+                .onErrorResume(error -> Mono.just(new ICD10()))
                 .block();
     }
 
@@ -152,6 +160,8 @@ public class GenomicDictionaryService {
                         .build(hpoId))
                 .retrieve()
                 .bodyToMono(HPO.class)
+                .doOnError(error -> log.error("[IMPORT ERROR]: Invalid HPO: "+hpoId, error.getMessage()))
+                .onErrorResume(error -> Mono.just(new HPO()))
                 .block();
     }
 
@@ -174,19 +184,24 @@ public class GenomicDictionaryService {
                 .block();
     }
 
+    //TODO: Check if web client is the best approach
     public Gene getGene(String assemblyAccession, String geneId, Optional<String> schemaVersion) {
 
         MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
         schemaVersion.ifPresent(s -> queryParams.add("schemaVersion",s));
 
-        return this.webClient.get()
+        Gene gene = this.webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/assemblies/{assemblyAccession}/genes/{genId}")
                         .queryParams(queryParams)
                         .build(assemblyAccession, geneId))
                 .retrieve()
                 .bodyToMono(Gene.class)
+                .doOnError(error -> log.error("[IMPORT ERROR]: Invalid gene: "+geneId, error.getMessage()))
+                .onErrorResume(error -> Mono.just(new Gene()))
                 .block();
+
+        return gene;
     }
 
     public List<Gene> getGeneList(String assemblyAccession, Optional<String> searchText,
@@ -215,14 +230,18 @@ public class GenomicDictionaryService {
         MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
         schemaVersion.ifPresent(s -> queryParams.add("schemaVersion",s));
 
-        return this.webClient.get()
+        Transcript transcript = this.webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/assemblies/{assemblyAccession}/transcripts/{transcriptId}")
                         .queryParams(queryParams)
                         .build(assemblyAccession, transcriptId))
                 .retrieve()
                 .bodyToMono(Transcript.class)
+                .doOnError(error -> log.error("[IMPORT ERROR]: Invalid transcript: "+transcriptId, error.getMessage()))
+                .onErrorResume(error -> Mono.just(new Transcript()))
                 .block();
+
+        return transcript;
     }
 
     public List<Transcript> getTranscriptList(String assemblyAccession, Optional<String> searchText,
@@ -247,19 +266,45 @@ public class GenomicDictionaryService {
                 .block();
     }
 
-    public String checkRegion(String assemblyAccession, String regions, String start,
+    public ResponseEntity<String> checkRegion(String assemblyAccession, String regions, String start,
                                             String end, Optional<String> schemaVersion) {
+
+        HttpStatus responseStatus = HttpStatus.OK;
+        String responseBody;
+
+        if(assemblyAccession.isEmpty() || regions.isEmpty() || start.isEmpty() || end.isEmpty()){
+            return new ResponseEntity<>("ERROR: There are empty mandatory fields.",HttpStatus.BAD_REQUEST);
+        }
 
         MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
         schemaVersion.ifPresent(s -> queryParams.add("schemaVersion",s));
 
-        return this.webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/assemblies/{assemblyAccession}/regions/{seqRegionId}/{start}/{end}")
-                        .queryParams(queryParams)
-                        .build(assemblyAccession, regions, start, (Integer.parseInt(end)+1)))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
+        responseBody = this.webClient.get()
+            .uri(uriBuilder -> uriBuilder
+                    .path("/assemblies/{assemblyAccession}/regions/{seqRegionId}/{start}/{end}")
+                    .queryParams(queryParams)
+                    .build(assemblyAccession, regions, start, (Integer.parseInt(end) + 1)))
+            .exchange()
+            .flatMap(
+                clientResponse -> {
+                    if (clientResponse.statusCode()
+                            .equals(HttpStatus.OK)) {
+                        return clientResponse.bodyToMono(String.class);
+                    } else if (clientResponse.statusCode()
+                            .is4xxClientError()) {
+                        return Mono.just("Error response");
+                    } else {
+                        return clientResponse.createException()
+                                .flatMap(Mono::error);
+                    }
+                }
+            )
+            .block();
+
+            if(responseBody.equals("Error response")){
+                return new ResponseEntity<>("Error response",HttpStatus.BAD_REQUEST);
+            }
+
+        return new ResponseEntity<>(responseBody, responseStatus);
     }
 }

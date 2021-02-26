@@ -1,14 +1,16 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
+import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.dto.user.UserDTO;
 import com.fujitsu.mmp.msusermanagement.dto.user.UserHistoryDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserPermissionDTO;
 import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserDTO;
 import com.fujitsu.mmp.msusermanagement.email.EmailServiceImpl;
 import com.fujitsu.mmp.msusermanagement.entities.Configuration;
 import com.fujitsu.mmp.msusermanagement.entities.Permission;
 import com.fujitsu.mmp.msusermanagement.entities.User;
+import com.fujitsu.mmp.msusermanagement.mappers.PermissionMapper;
 import com.fujitsu.mmp.msusermanagement.mappers.UserMapper;
-import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.repositories.ConfigurationRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.PermissionRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
@@ -22,27 +24,30 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class UserService {
 
     @Autowired
-    private PermissionRepository permissionRepository;
+    PermissionRepository permissionRepository;
 
     @Autowired
-    private ConfigurationRepository configurationRepository;
+    ConfigurationRepository configurationRepository;
 
     @Autowired
-    private UserHistoryService userHistoryService;
+    PermissionMapper permissionMapper;
 
     @Autowired
-    private EmailServiceImpl emailService;
+    UserHistoryService userHistoryService;
 
     @Autowired
-    private JWTUtility jwtUtility;
+    EmailServiceImpl emailService;
+
+    @Autowired
+    JWTUtility jwtUtility;
 
     @Autowired
     PasswordEncoder encoder;
@@ -71,18 +76,10 @@ public class UserService {
         User user = userMapper.dtoToEntity(userDTO);
         user.setDateCreated(new Date());
 
-        User createdUser = userRepository.save(user);
+        userRepository.save(user);
 
         if(userDTO.getCanCreateProject()) {
-            Permission userPermissionCreateProjects
-                    = findPermission("create-projects-undefined");
-
-            Set<User> users = userPermissionCreateProjects.getUsers();
-            users.add(createdUser);
-
-            userPermissionCreateProjects.setUsers(users);
-
-            permissionRepository.save(userPermissionCreateProjects);
+            createProjectPermission(user.getIdentifier());
         }
 
         emailService.sendLinkToPasswordScreen(user.getIdentifier());
@@ -99,6 +96,7 @@ public class UserService {
             responseStatus = HttpStatus.NOT_FOUND;
         } else {
             responseBody = userMapper.entityToDTO(entity);
+            responseBody.setCanCreateProject(permissionRepository.existsByUserIdAndActionAndEntityType(entity.getIdentifier(), "create", "projects"));
         }
 
         return new ResponseEntity<>(responseBody, responseStatus);
@@ -152,30 +150,27 @@ public class UserService {
                 responseStatus = HttpStatus.EXPECTATION_FAILED;
             } else if (!entity.getVersion().equals(userDTO.getVersion())) {
                 responseStatus = HttpStatus.CONFLICT;
-            }else if(!userDTO.getEmail().equals(entity.getEmail()) && userRepository.existsByEmail(entity.getEmail())){
+            }else if(!userDTO.getEmail().equals(entity.getEmail()) && userRepository.existsByEmail(userDTO.getEmail())){
                 responseStatus = HttpStatus.CONFLICT;
             } else {
 
                 User entityToSave = userMapper.dtoToEntity(userDTO);
                 entityToSave.setId(entity.getId());
+                entityToSave.setPassword(entity.getPassword());
                 entityToSave = userRepository.save(entityToSave);
                 responseBody = userMapper.entityToDTO(entityToSave);
 
-                if(!userDTO.getCanCreateProject().equals(entity.getCanCreateProject())){
+                if(!userDTO.getCanCreateProject().equals(permissionRepository.existsByUserIdAndActionAndEntityType(entityToSave.getIdentifier(), "create", "projects"))) {
 
-                    Permission userPermissionCreateProjects
-                            = findPermission("create-projects-undefined");
-                    Set<User> users = userPermissionCreateProjects.getUsers();
-
-                    if(userDTO.getCanCreateProject()) {
-                        users.add(entityToSave);
-                    }else{
-                        users.remove(entityToSave);
+                    if (userDTO.getCanCreateProject()) {
+                        createProjectPermission(entityToSave.getIdentifier());
+                        responseBody.setCanCreateProject(true);
+                    } else {
+                        permissionRepository.delete(permissionRepository.findByUserIdAndActionAndEntityType(entityToSave.getIdentifier(), "create", "projects"));
+                        responseBody.setCanCreateProject(false);
                     }
-
-                    userPermissionCreateProjects.setUsers(users);
-                    permissionRepository.save(userPermissionCreateProjects);
                 }
+
             }
         }
         return new ResponseEntity<>(responseBody, responseStatus);
@@ -227,12 +222,6 @@ public class UserService {
         return new ResponseEntity<>(responseStatus);
     }
 
-    Permission findPermission(String permissionName) {
-        Permission permission = permissionRepository.findByName(permissionName)
-                .orElseThrow(() -> new RuntimeException("Error: Permission is not found."));
-        return permission;
-    }
-
     public ResponseEntity<UserDTO> changePassword(String identifier, String password) {
         HttpStatus responseStatus = HttpStatus.OK;
         UserDTO responseBody = null;
@@ -249,6 +238,41 @@ public class UserService {
                 responseBody = userMapper.entityToDTO(entity);
             }
         }
+        return new ResponseEntity<>(responseBody, responseStatus);
+    }
+
+    private void createProjectPermission(String userId) {
+
+        Permission permission = new Permission();
+
+        permission.setAction("create");
+        permission.setEntityType("projects");
+        permission.setEntityId("undefined");
+        permission.setUserId(userId);
+
+        permissionRepository.save(permission);
+    }
+
+    public ResponseEntity<UserPermissionDTO> getPermissions(HttpServletRequest request) {
+        HttpStatus responseStatus = HttpStatus.OK;
+        UserPermissionDTO responseBody = new UserPermissionDTO();
+        List<Permission> permissionList;
+
+        String token = request.getHeader("Authorization");
+        String username = "";
+
+        if (token != null) {
+            username = jwtUtility.getUsernameFromToken(token.substring(6));
+        }
+
+        if(userRepository.findByIdentifier(username).getUserType().equals("Admin")){
+            responseBody.setUserType("Admin");
+        } else {
+            responseBody.setUserType("User");
+            permissionList = permissionRepository.findByUserId(username);
+            responseBody.setPermissionList(permissionMapper.listEntityToListDto(permissionList));
+        }
+
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 }

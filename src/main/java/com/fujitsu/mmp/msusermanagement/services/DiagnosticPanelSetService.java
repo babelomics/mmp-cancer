@@ -2,6 +2,7 @@ package com.fujitsu.mmp.msusermanagement.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.fujitsu.mmp.msusermanagement.constants.ESource;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.DiagnosticPanelSetDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.exportimport.DiagnosticPanelExportImportDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.exportimport.DiagnosticPanelSetExportImportDTO;
@@ -264,7 +265,7 @@ public class DiagnosticPanelSetService {
     public ResponseEntity<String> importPanelSet(MultipartFile file, String id, String name, Boolean isOverwritten) {
 
         ObjectMapper mapper = new ObjectMapper();
-
+        DiagnosticPanelSet savedDiagnosticPanelset = null;
         //TODO THROW EXCEPTION/ ADD EXCEPTIONS
 
         if (file.getOriginalFilename() == null) {
@@ -299,22 +300,6 @@ public class DiagnosticPanelSetService {
                     panelSet.setName(name);
                     panelSet.setId(id);
 
-                    if (isOverwritten) {
-                        DiagnosticPanelSet diagnosticPanelSet;
-
-                        if (diagnosticPanelSetRepository.findByDiagnosticPanelSetIdentifier(id) != null) {
-                            diagnosticPanelSet = diagnosticPanelSetRepository.findByDiagnosticPanelSetIdentifier(id);
-                        }else{
-                            diagnosticPanelSet = diagnosticPanelSetRepository.findByName(name);
-                        }
-
-                        List<DiagnosticPanel> diagnosticPanelList = diagnosticPanelRepository
-                                .findByDiagnosticPanelSetIdentifier(diagnosticPanelSet.getDiagnosticPanelSetIdentifier());
-
-                        diagnosticPanelRepository.deleteAll(diagnosticPanelList);
-                        diagnosticPanelSetRepository.delete(diagnosticPanelSet);
-                    }
-
                     if(checkDateInFutureFromString(panelSet.getCreationDate()) || (panelSet.getDeletionDate() != null && checkDateInFutureFromString(panelSet.getDeletionDate())) || (panelSet.getExportDate() != null && checkDateInFutureFromString(panelSet.getExportDate()))){
                         return new ResponseEntity<>(
                                 "Error: Dates cannot be in the future!. CUSTOM_ERROR_CODE: 422_FUTURE_DATES",
@@ -328,6 +313,30 @@ public class DiagnosticPanelSetService {
                     }
 
                     for (DiagnosticPanelExportImportDTO panel : panelSet.getPanels()) {
+
+                        if(panel.getAssociations() != null) {
+                            List<DiagnosticPanelAssociation> icd10List = panel.getAssociations().stream()
+                                    .filter(temp -> temp.getSource().equals(ESource.ICD10))
+                                    .collect(Collectors.toList());
+
+                            List<DiagnosticPanelAssociation> hpoList = panel.getAssociations().stream()
+                                    .filter(temp -> temp.getSource().equals(ESource.HPO))
+                                    .collect(Collectors.toList());
+
+                            Boolean isInvalidHPO = hpoList.stream().anyMatch(temp ->
+                                    genomicDictionaryService
+                                            .getHpo(temp.getValue()).getHpoId() == null) ;
+
+                            Boolean isInvalidICD10 = icd10List.stream().anyMatch(temp ->
+                                    genomicDictionaryService
+                                            .getICD10(temp.getValue()).getId() == null);
+
+                            if (isInvalidHPO || isInvalidICD10) {
+                                return new ResponseEntity<>(
+                                        "Error: There are panels with invalid associations (HPO, ICD-10). CUSTOM_ERROR_CODE: 422_INVALID_ASSOCIATIONS",
+                                        HttpStatus.UNPROCESSABLE_ENTITY);
+                            }
+                        }
 
                         if (panel.getFeatures() != null) {
 
@@ -355,11 +364,11 @@ public class DiagnosticPanelSetService {
 
                             Boolean isInvalidTranscript = transcriptList.stream().anyMatch(temp ->
                                     genomicDictionaryService
-                                            .getTranscript(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.empty()) == null);
+                                            .getTranscript(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.empty()).getTranscriptId() == null);
 
                             Boolean isInvalidGene = geneList.stream().anyMatch(temp ->
                                     genomicDictionaryService
-                                            .getGene(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.empty()) == null);
+                                            .getGene(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.empty()).getGeneId() == null);
 
                             if (isInvalidTranscript || isInvalidGene || isInvalidRegion || isInvalidVariant) {
                                 return new ResponseEntity<>(
@@ -412,11 +421,14 @@ public class DiagnosticPanelSetService {
 
                     for (Map.Entry<String, List<DiagnosticPanelExportImportDTO>> entry : archivedPanelMap.entrySet()) {
 
-                        if (getDateFromISO8601(currentPanelMap.get(entry.getKey()).get(0).getCreationDate())
-                                .before(getDateFromISO8601(archivedPanelMap.get(entry.getKey()).get(0).getDeletionDate()))) {
-                            return new ResponseEntity<>(
-                                    "Error: There are some panels inside of the collection with the same name or id that coexists in the same period of time. CUSTOM_ERROR_CODE: 422_PANELS_COEXIST",
-                                    HttpStatus.CONFLICT);
+                        if(currentPanelMap.containsKey(entry.getKey())){
+
+                            if (getDateFromISO8601(currentPanelMap.get(entry.getKey()).get(0).getCreationDate())
+                                    .before(getDateFromISO8601(archivedPanelMap.get(entry.getKey()).get(0).getDeletionDate()))) {
+                                return new ResponseEntity<>(
+                                        "Error: There are some panels inside of the collection with the same name or id that coexists in the same period of time. CUSTOM_ERROR_CODE: 422_PANELS_COEXIST",
+                                        HttpStatus.CONFLICT);
+                            }
                         }
 
                         if (entry.getValue().size() > 1) {
@@ -433,6 +445,22 @@ public class DiagnosticPanelSetService {
                                 }
                             }
                         }
+                    }
+
+                    if (isOverwritten) {
+                        DiagnosticPanelSet diagnosticPanelSet;
+
+                        if (diagnosticPanelSetRepository.findByDiagnosticPanelSetIdentifier(id) != null) {
+                            diagnosticPanelSet = diagnosticPanelSetRepository.findByDiagnosticPanelSetIdentifier(id);
+                        }else{
+                            diagnosticPanelSet = diagnosticPanelSetRepository.findByName(name);
+                        }
+
+                        List<DiagnosticPanel> diagnosticPanelList = diagnosticPanelRepository
+                                .findByDiagnosticPanelSetIdentifier(diagnosticPanelSet.getDiagnosticPanelSetIdentifier());
+
+                        diagnosticPanelRepository.deleteAll(diagnosticPanelList);
+                        diagnosticPanelSetRepository.delete(diagnosticPanelSet);
                     }
 
                     DiagnosticPanelSet diagnosticPanelSet = new DiagnosticPanelSet();
@@ -467,15 +495,20 @@ public class DiagnosticPanelSetService {
                             diagnosticPanel.setStatus(EStatus.CURRENT);
                         }
 
-                        List<DiagnosticPanelFeature> regionList = panel.getFeatures()
-                                .stream()
-                                .filter(temp -> EType.REGION.equals(temp.getType()))
-                                .collect(Collectors.toList());
+                        List<DiagnosticPanelFeature> regionList = new ArrayList<>();
+                        List<DiagnosticPanelFeature> variantList = new ArrayList<>();
 
-                        List<DiagnosticPanelFeature> variantList = panel.getFeatures()
-                                .stream()
-                                .filter(temp -> EType.VARIANT.equals(temp.getType()))
-                                .collect(Collectors.toList());
+                        if(panel.getFeatures() != null){
+                            regionList = panel.getFeatures()
+                                    .stream()
+                                    .filter(temp -> EType.REGION.equals(temp.getType()))
+                                    .collect(Collectors.toList());
+
+                            variantList = panel.getFeatures()
+                                    .stream()
+                                    .filter(temp -> EType.VARIANT.equals(temp.getType()))
+                                    .collect(Collectors.toList());
+                        }
 
                         if (regionList.size() > 0) {
                             createNewRegions(regionList);
@@ -489,7 +522,7 @@ public class DiagnosticPanelSetService {
 
                     });
 
-                    diagnosticPanelSetRepository.save(diagnosticPanelSet);
+                    savedDiagnosticPanelset = diagnosticPanelSetRepository.save(diagnosticPanelSet);
 
                     List<String> auxList = new ArrayList<>();
 
@@ -528,7 +561,7 @@ public class DiagnosticPanelSetService {
                 }
             }
         }
-        return new ResponseEntity<>("Imported successfully!", HttpStatus.OK);
+        return new ResponseEntity<>("Imported successfully! [ "+ (savedDiagnosticPanelset != null ? savedDiagnosticPanelset.getDiagnosticPanelSetIdentifier() : "unexpected error") +" ]", HttpStatus.OK);
     }
 
     private String getFileExtension(String fileName) {
@@ -548,7 +581,7 @@ public class DiagnosticPanelSetService {
     }
 
     private Boolean isHuman (String assemblyAccession) {
-        MetaAssembly metaAssembly = genomicDictionaryService.getEnsemlReleaseMeta(assemblyAccession);
+        MetaAssembly metaAssembly = genomicDictionaryService.getMetaAssembly(assemblyAccession);
         return metaAssembly.getAssembly().getSpecies().getTaxonomyId().equals(9606);
     }
 
@@ -561,9 +594,9 @@ public class DiagnosticPanelSetService {
     }
 
     private Boolean checkAuthorExist(String author) {
-        boolean authorExist = true;
-        if(!userRepository.existsByIdentifier(author) || !userHistoryRepository.existsByIdentifier(author)){
-            authorExist = false;
+        boolean authorExist = false;
+        if(userRepository.existsByIdentifier(author) || userHistoryRepository.existsByIdentifier(author)){
+            authorExist = true;
         }
         return authorExist;
     }
@@ -579,7 +612,7 @@ public class DiagnosticPanelSetService {
             if(Integer.parseInt(start) >  Integer.parseInt(end)){
                 isValidRegion = false;
             }else{
-                if(genomicDictionaryService.checkRegion(assemblyAccession, seqRegionId, start, end, Optional.empty()) == null){
+                if(genomicDictionaryService.checkRegion(assemblyAccession, seqRegionId, start, end, Optional.empty()).getStatusCode() != HttpStatus.OK){
                     isValidRegion = false;
                 }
             }
@@ -607,7 +640,7 @@ public class DiagnosticPanelSetService {
                     region.setRegionIdentifier(temp.getDiagnosticPanelFeatureIdentifier());
                     region.setChromosomeSequence(temp.getDiagnosticPanelFeatureIdentifier().split(":")[0]);
                     region.setInitPosition(temp.getDiagnosticPanelFeatureIdentifier().split(":")[1]);
-                    region.setEndPosition(String.valueOf(Integer.valueOf(temp.getDiagnosticPanelFeatureIdentifier().split(":")[2]) + 1));
+                    region.setEndPosition(String.valueOf(Integer.parseInt(temp.getDiagnosticPanelFeatureIdentifier().split(":")[2]) + 1));
                     return region;
                 })
                 .collect(Collectors.toList());

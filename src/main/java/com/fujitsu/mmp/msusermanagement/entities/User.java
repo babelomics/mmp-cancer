@@ -28,5 +28,4 @@ public class User {
     private Date dateCreated;
     private Date dateLastAccess;
     private String userType;
-    private Boolean canCreateProject;
 }

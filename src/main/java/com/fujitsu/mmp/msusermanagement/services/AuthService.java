@@ -60,9 +60,9 @@ public class AuthService {
         user.setDateLastAccess(new Date());
         userRepository.save(user);
 
-        List<Permission> permissionList = permissionRepository.findByUsers(user.getId());
+        List<Permission> permissionList = permissionRepository.findByUserId(user.getId());
 
-        String jwt = jwtUtils.generateToken(userDetails, user.getUserType(), permissionList);
+        String jwt = jwtUtils.generateToken(userDetails, user.getUserType(), permissionList, user.getFirstName(), user.getLastName());
 
         return ResponseEntity.ok(new JwtResponse(jwt,
                 userDetails.getId(),

@@ -18,9 +18,6 @@ public class Configuration {
     @Id
     private String id;
     private String contactIdentifier;
-    private String contactName;
-    private String contactLastName;
-    private String contactEmail;
     private String setupInformation;
     private String pandrugURL;
     private String pandrugUser;

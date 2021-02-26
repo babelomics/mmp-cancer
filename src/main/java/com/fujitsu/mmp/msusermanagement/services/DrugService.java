@@ -32,16 +32,16 @@ public class DrugService {
     private final WebClient webClient;
 
     @Autowired
-    private DrugRepository drugRepository;
+    DrugRepository drugRepository;
 
     @Autowired
-    private DrugHistoryRepository drugHistoryRepostory;
+    DrugHistoryRepository drugHistoryRepostory;
 
     @Autowired
-    private DrugMapper drugMapper;
+    DrugMapper drugMapper;
 
     @Autowired
-    private JWTUtility jwtUtility;
+    JWTUtility jwtUtility;
 
     @Autowired
     public DrugService(WebClient.Builder webClientBuilder) {

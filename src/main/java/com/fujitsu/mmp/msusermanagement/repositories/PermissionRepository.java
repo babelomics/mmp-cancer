@@ -5,11 +5,18 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface PermissionRepository extends MongoRepository<Permission, String> {
-    Optional<Permission> findByName(String permissionName);
+    List<Permission> findByUserId (String userId);
 
-    List<Permission> findByUsers(String userId);
+    boolean existsByUserIdAndActionAndEntityType(String identifier, String action, String entityType);
+
+    Permission findByUserIdAndActionAndEntityType(String identifier, String action, String entityType);
+
+    boolean existsByActionAndEntityTypeAndEntityIdAndUserId(String action, String entityType, String entityId, String userId);
+
+    Permission findByUserIdAndActionAndEntityTypeAndEntityId(String userId, String action, String entityType, String entityId);
+
+    List<Permission> findByUserIdAndEntityId(String userId, String projectId);
 }

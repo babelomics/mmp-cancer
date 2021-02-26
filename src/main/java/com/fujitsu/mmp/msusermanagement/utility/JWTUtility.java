@@ -91,10 +91,12 @@ public class JWTUtility implements Serializable {
      * @param userDetails
      * @return
      */
-    public String generateToken(UserDetails userDetails, String userType, List<Permission> permissionList) {
+    public String generateToken(UserDetails userDetails, String userType, List<Permission> permissionList, String firstName, String lastName) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userType", userType);
         claims.put("permissionList", permissionList);
+        claims.put("firstName", firstName);
+        claims.put("lastName", lastName);
         return doGenerateToken(claims, userDetails.getUsername());
     }
 
@@ -154,8 +156,9 @@ public class JWTUtility implements Serializable {
         long diffInMillis = Math.abs(getExpirationDateFromToken(token).getTime() - new Date().getTime());
         long diffInMinutes = TimeUnit.MINUTES.convert(diffInMillis, TimeUnit.MILLISECONDS);
 
-        if (diffMinutes != null && diffInMinutes < diffMinutes || diffMinutes == null) {
+        if (diffMinutes == null || diffInMinutes < diffMinutes) {
             String identifier = getUsernameFromToken(token);
+
             UserDetails userDetails
                     = userDetailsService.loadUserByUsername(identifier);
 

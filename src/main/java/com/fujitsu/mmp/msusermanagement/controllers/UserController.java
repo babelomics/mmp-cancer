@@ -2,6 +2,7 @@ package com.fujitsu.mmp.msusermanagement.controllers;
 
 
 import com.fujitsu.mmp.msusermanagement.dto.user.UserDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserPermissionDTO;
 import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserDTO;
 import com.fujitsu.mmp.msusermanagement.services.AuthService;
 import com.fujitsu.mmp.msusermanagement.services.UserService;
@@ -116,5 +117,14 @@ public class UserController {
     @PostMapping("/refreshToken")
     public ResponseEntity<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
         return authService.refreshToken(request.getHeader("Authorization").substring(7), response);
+    }
+
+    /**
+     * Get a list of user permissions if the user is not an admin.
+     * @return Object with the type of user and with the list of permissions if the user is not an admin.
+     */
+    @GetMapping("/user/permissions")
+    public ResponseEntity<UserPermissionDTO> getPermissions (HttpServletRequest request) {
+        return userService.getPermissions(request);
     }
 }
