@@ -11,7 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "*", maxAge = 3600, exposedHeaders = "Authorization")
 @RequestMapping("/api/auth")
 @RestController
 public class AuthController {
@@ -34,8 +34,8 @@ public class AuthController {
      * @return Success message for valid identifier and password.
      */
     @PostMapping("/signup")
-    public ResponseEntity<?> signupUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        return authService.signupUser(signUpRequest);
+    public ResponseEntity<?> signupUser(@Valid @RequestBody SignupRequest signUpRequest, HttpServletRequest httpServletRequest) {
+        return authService.signupUser(signUpRequest, httpServletRequest);
     }
 
 }

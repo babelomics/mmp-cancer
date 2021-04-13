@@ -1,14 +1,15 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
 import com.fujitsu.mmp.msusermanagement.dto.group.GroupDTO;
-import com.fujitsu.mmp.msusermanagement.dto.group.OptionToDeleteDTO;
-import com.fujitsu.mmp.msusermanagement.dto.group.PermissionDTO;
-import com.fujitsu.mmp.msusermanagement.dto.group.filters.FilterUsersGroupsDTO;
+import com.fujitsu.mmp.msusermanagement.dto.group.OptionDTO;
+import com.fujitsu.mmp.msusermanagement.dto.permission.PermissionDTO;
+import com.fujitsu.mmp.msusermanagement.dto.group.filters.FilterGroupsDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Group;
 import com.fujitsu.mmp.msusermanagement.entities.Permission;
 import com.fujitsu.mmp.msusermanagement.mappers.GroupMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.GroupRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.PermissionRepository;
+import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -32,19 +33,29 @@ public class GroupService {
     @Autowired
     PermissionRepository permissionRepository;
 
-    public ResponseEntity<Page<GroupDTO>> listGroups(Pageable pageable, FilterUsersGroupsDTO filterUsersGroupsDTO) {
+    @Autowired
+    UserRepository userRepository;
+
+    public ResponseEntity<Page<GroupDTO>> listGroups(Pageable pageable, FilterGroupsDTO filterGroupsDTO, String projectId) {
         HttpStatus responseStatus = HttpStatus.OK;
-        Page<GroupDTO> responseBody;
+        Page<GroupDTO> responseBody = null;
 
-        Page<Group> pageEntity = groupRepository.findUsersGroupsByFilters
-                (filterUsersGroupsDTO, pageable);
+        if(projectId == null){
+            responseStatus= HttpStatus.UNPROCESSABLE_ENTITY;
+        }else {
 
-        List<GroupDTO> groupDTOList = groupMapper.listEntityToListDto(pageEntity.getContent());
-        groupDTOList.forEach(temp -> temp.setPermissionsNameList(temp.getPermissions()
-                .stream()
-                .map(aux -> aux.getAction() + " - " + aux.getEntityType()).collect(Collectors.toList())));
+            Page<Group> pageEntity = groupRepository.findGroupsByFiltersAndProjectId
+                    (filterGroupsDTO, pageable, projectId);
 
-        responseBody = new PageImpl<>(groupDTOList, pageable, pageEntity.getTotalElements());
+            List<GroupDTO> groupDTOList = groupMapper.listEntityToListDto(pageEntity.getContent());
+
+            groupDTOList.stream().filter(temp -> temp.getPermissions() != null)
+                    .forEach(temp -> temp.setPermissionsNameList(temp.getPermissions()
+                    .stream()
+                    .map(aux -> aux.getAction() + " - " + aux.getEntityType()).collect(Collectors.toList())));
+
+            responseBody = new PageImpl<>(groupDTOList, pageable, pageEntity.getTotalElements());
+        }
 
         return new ResponseEntity<>(responseBody, responseStatus);
     }
@@ -54,57 +65,55 @@ public class GroupService {
         HttpStatus responseStatus = HttpStatus.CREATED;
         GroupDTO responseBody = null;
 
-        if (groupDTO.getGroupId() == null) {
+        if (groupDTO.getGroupId() == null || groupDTO.getGroupId().isEmpty() || groupDTO.getName() == null || groupDTO.getName().isEmpty() || groupDTO.getDescription() == null ||  groupDTO.getDescription().isEmpty()) {
             responseStatus = HttpStatus.UNPROCESSABLE_ENTITY;
         } else if (groupRepository.existsByName(groupDTO.getName())) {
             responseStatus = HttpStatus.CONFLICT;
         } else {
-            groupDTO.getUsers().forEach(temp -> {
-                groupDTO.getPermissions().forEach(aux -> {
-                    if (!permissionRepository.existsByActionAndEntityTypeAndEntityIdAndUserId(aux.getAction(), aux.getEntityType(), aux.getEntityId(), temp)) {
-                        Permission permission = new Permission();
-                        permission.setAction(aux.getAction());
-                        permission.setEntityType(aux.getEntityType());
-                        permission.setEntityId(aux.getEntityId());
-                        permission.setUserId(temp);
-                        permissionRepository.save(permission);
-                    }
-                });
-            });
+            Group group = groupMapper.dtoToEntity(groupDTO);
+            group.setUsers(new ArrayList<>());
 
-            Group usersGroup = groupMapper.dtoToEntity(groupDTO);
-            Group createdUsersGroup = groupRepository.save(usersGroup);
+            if (group.getPermissions() == null) {
+                group.setPermissions(new ArrayList<>());
+            }
+            
+            Group createdUsersGroup = groupRepository.save(group);
+
             responseBody = groupMapper.entityToDto(createdUsersGroup);
         }
 
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 
-    public ResponseEntity<GroupDTO> getGroup(String groupId) {
+    public ResponseEntity<GroupDTO> getGroup(String groupGuid) {
         HttpStatus responseStatus = HttpStatus.OK;
         GroupDTO responseBody = null;
 
-        Group entity = groupRepository.findByGroupId(groupId);
+        Group entity = groupRepository.findByGuid(groupGuid);
 
         if (entity == null) {
             responseStatus = HttpStatus.NOT_FOUND;
         } else {
             responseBody = groupMapper.entityToDto(entity);
-            responseBody.getPermissions().forEach(temp -> temp.setName(temp.getAction() + " " + temp.getEntityType()));
-
+            
+            if(responseBody.getPermissions() != null){
+                responseBody.getPermissions().forEach(temp -> temp.setName(temp.getAction() + " " + temp.getEntityType()));
+            }
         }
+
         return new ResponseEntity<>(responseBody, responseStatus);
     }
 
-    public ResponseEntity<Void> deleteGroup(String groupId, OptionToDeleteDTO optionToDeleteDTO) {
+    public ResponseEntity<Void> deleteGroup(String guid, OptionDTO optionDTO) {
         HttpStatus responseStatus = HttpStatus.NO_CONTENT;
-        Group group = groupRepository.findByGroupId(groupId);
+
+        Group group = groupRepository.findByGuid(guid);
 
         if (group == null) {
             responseStatus = HttpStatus.NOT_FOUND;
         } else {
             List<Permission> permissionList = new ArrayList<>();
-            if(optionToDeleteDTO.getOption().equals("op1")){
+            if(optionDTO.getOption().equals("op1")){
                 for (String userId: group.getUsers()) {
                     if(groupRepository.findByUsersAndProjectId(userId,group.getProjectId()).size()<=1){
                         permissionList = permissionRepository.findByUserIdAndEntityId(userId, group.getProjectId());
@@ -112,10 +121,10 @@ public class GroupService {
                 }
             }
 
-            if(optionToDeleteDTO.getOption().equals("op1") || optionToDeleteDTO.getOption().equals("op3"))
+            if(optionDTO.getOption().equals("op1") || optionDTO.getOption().equals("op3"))
                 for (String temp: group.getUsers()) {
                     for (PermissionDTO aux: group.getPermissions()) {
-                        if (!groupRepository.hasPermissionsInAnotherGroup(temp, groupId, aux)) {
+                        if (!groupRepository.hasPermissionsInAnotherGroup(temp, group.getName(), aux)) {
                             Permission permission = permissionRepository.findByUserIdAndActionAndEntityTypeAndEntityId(temp, aux.getAction(), aux.getEntityType(), aux.getEntityId());
                             permissionList.add(permission);
                         }
@@ -127,21 +136,30 @@ public class GroupService {
             groupRepository.delete(group);
         }
         
-        return new ResponseEntity<Void>(responseStatus);
+        return new ResponseEntity<>(responseStatus);
     }
 
-    public ResponseEntity<GroupDTO> updateGroup(String groupId, GroupDTO groupDTO) {
+    public ResponseEntity<GroupDTO> updateGroup(String groupGuid, GroupDTO groupDTO) {
         HttpStatus responseStatus = HttpStatus.OK;
         GroupDTO responseBody = null;
 
-        if(groupId == null) {
+        if (groupDTO.getGroupId() == null || groupDTO.getGroupId().isEmpty() || groupDTO.getName() == null || groupDTO.getName().isEmpty() || groupDTO.getDescription() == null ||  groupDTO.getDescription().isEmpty()) {
             responseStatus = HttpStatus.UNPROCESSABLE_ENTITY;
+        } else if(!groupGuid.equals(groupDTO.getGuid())){
+            responseStatus = HttpStatus.BAD_REQUEST;
         } else {
-            Group entity = groupRepository.findByGroupId(groupId);
+            Group entity = groupRepository.findByGuid(groupGuid);
             if (entity == null) {
                 responseStatus = HttpStatus.NOT_FOUND;
             } else {
                 Group entityToSave = groupMapper.dtoToEntity(groupDTO);
+
+                if (entityToSave.getPermissions() == null) {
+                    entityToSave.setPermissions(new ArrayList<>());
+                }
+
+                entityToSave.setGuid(entity.getGuid());
+
                 groupDTO.getUsers().forEach(temp-> {
                     groupDTO.getPermissions().forEach(aux-> {
                         if(!permissionRepository.existsByActionAndEntityTypeAndEntityIdAndUserId(aux.getAction(),
@@ -153,7 +171,7 @@ public class GroupService {
                             permission.setUserId(temp);
                             permissionRepository.save(permission);
                         }else{
-                            if(!groupRepository.hasPermissionsInAnotherGroup(temp, groupId, aux)){
+                            if(!groupRepository.hasPermissionsInAnotherGroup(temp, groupDTO.getName(), aux)){
                                 Permission permission = permissionRepository.findByUserIdAndActionAndEntityTypeAndEntityId(temp, aux.getAction(), aux.getEntityType(), aux.getEntityId());
                                 permissionRepository.delete(permission);
                             }
@@ -167,5 +185,4 @@ public class GroupService {
         }
         return new ResponseEntity<>(responseBody, responseStatus);
     }
-
 }

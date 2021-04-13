@@ -10,14 +10,19 @@ import com.fujitsu.mmp.msusermanagement.repositories.PermissionRepository;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
 import com.fujitsu.mmp.msusermanagement.security.UserDetailsImpl;
 import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
+import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
 import java.util.List;
@@ -37,11 +42,24 @@ public class AuthService {
     PermissionRepository permissionRepository;
 
     @Autowired
+    UserDetailsService userDetailsService;
+
+    @Autowired
+    JWTUtility jwtUtility;
+
+    @Autowired
     PasswordEncoder encoder;
 
-    public ResponseEntity<?> signupUser (SignupRequest signupRequest) {
+    public ResponseEntity<?> signupUser (SignupRequest signupRequest, HttpServletRequest httpServletRequest) {
+        String token = httpServletRequest.getHeader("Authorization");
 
         User user = userRepository.findByIdentifier(signupRequest.getIdentifier());
+
+        if (token == null || !jwtUtility.validateTokenWithPassword(token, user.getPassword())) {
+                return new ResponseEntity<>(
+                        "Error: invalid token.",
+                        HttpStatus.EXPECTATION_FAILED);
+        }
 
         user.setPassword(encoder.encode(signupRequest.getPassword()));
 

@@ -75,6 +75,7 @@ public class JWTUtility implements Serializable {
         return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
     }
 
+
     /**
      * Check if the token has expired.
      * @param token
@@ -105,9 +106,9 @@ public class JWTUtility implements Serializable {
      * @param identifier
      * @return
      */
-    public String generateTokenForLink(String identifier) {
+    public String generateTokenForLink(String identifier, String password) {
         Map<String, Object> claims = new HashMap<>();
-        return doGenerateTokenForLink(claims, identifier);
+        return doGenerateTokenForLink(claims, identifier, password);
     }
 
     /**
@@ -129,10 +130,10 @@ public class JWTUtility implements Serializable {
      * @param subject
      * @return
      */
-    private String doGenerateTokenForLink(Map<String, Object> claims, String subject) {
+    private String doGenerateTokenForLink(Map<String, Object> claims, String subject, String password) {
         return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME_LINK * 1000))
-                .signWith(SignatureAlgorithm.HS256, secretKey).compact();
+                .signWith(SignatureAlgorithm.HS256, password).compact();
     }
 
     /**
@@ -179,4 +180,18 @@ public class JWTUtility implements Serializable {
         return doGenerateToken(claims, userDetails.getUsername());
     }
 
+    /**
+     * Check if the token is signed with the user password
+     * @param token
+     * @param password
+     * @return
+     */
+    public boolean validateTokenWithPassword(String token, String password){
+        try{
+            Jwts.parser().setSigningKey(password).parseClaimsJws(token).getBody();
+        }catch (Exception e){
+            return false;
+        }
+        return true;
+    }
 }

@@ -55,8 +55,13 @@ public class ConfigurationService {
         if(!configurationList.isEmpty()){
             configuration = configurationList.get(0);
             contactUser = userRepository.findByIdentifier(configuration.getContactIdentifier());
+        }else{
+            logger.error("Error: The application is not configured yet or there are no configurations.");
+            return new ResponseEntity<>(
+                    "Error: The application is not configured yet.",
+                    HttpStatus.UNPROCESSABLE_ENTITY);
         }
-        
+
         if(authorization == null){
             if(isConfiguratedOK()){
                 responseBody.setSetupInformation(configuration.getSetupInformation());
@@ -79,7 +84,7 @@ public class ConfigurationService {
 
     public ResponseEntity<?> updateConfiguration(ConfigurationDTO configurationDTO, HttpServletRequest httpServletRequest) throws IOException {
         HttpStatus responseStatus = HttpStatus.OK;
-        Boolean isConfigured = false;
+        boolean isConfigured = false;
 
         String token = httpServletRequest.getHeader("Authorization");
         String username = "";

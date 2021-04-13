@@ -105,6 +105,15 @@ public class GenomicDictionaryController {
      *
      * @return
      */
+    @GetMapping("/hpos/phenotypicAbnormality/list")
+    public List<HPO> getHpoPhenotypicAbnormalityList () {
+        return genomicDictionaryService.getHpoPhenotypicAbnormalityList();
+    }
+
+    /**
+     *
+     * @return
+     */
     @GetMapping("/assemblies/{assemblyAccession}/genes/{geneId}")
     public Gene getGene (@PathVariable String assemblyAccession, @PathVariable String geneId,
                          @RequestParam Optional<String> schemaVersion) {

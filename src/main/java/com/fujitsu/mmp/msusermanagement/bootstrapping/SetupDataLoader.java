@@ -1,5 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.bootstrapping;
 
+import com.fujitsu.mmp.msusermanagement.constants.UserConstants;
 import com.fujitsu.mmp.msusermanagement.entities.Configuration;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.repositories.ConfigurationRepository;
@@ -60,7 +61,7 @@ public class SetupDataLoader implements
             adminUser.setFirstName("Admin");
             adminUser.setLastName("Admin");
             adminUser.setOrganization("Admin Organization");
-            adminUser.setUserType("Admin");
+            adminUser.setUserType(UserConstants.USER_TYPE_ADMIN);
 
             userRepository.save(adminUser);
 
@@ -70,6 +71,7 @@ public class SetupDataLoader implements
 
             configuration.setPandrugURL(PANDRUGS_BASE_URL);
             configuration.setGenomicDictionaryURL(GENOMIC_DICTIONARY_BASE_URL);
+            configuration.setContactIdentifier("admin");
 
             configurationRepository.save(configuration);
         }

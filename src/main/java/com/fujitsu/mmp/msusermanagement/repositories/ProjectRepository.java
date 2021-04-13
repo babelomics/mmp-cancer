@@ -10,4 +10,6 @@ public interface ProjectRepository extends MongoRepository<Project, String>, Pro
     boolean existsByProjectId(String projectId);
 
     Project findByProjectId(String id);
+
+    boolean existsBySamples(String entityId);
 }

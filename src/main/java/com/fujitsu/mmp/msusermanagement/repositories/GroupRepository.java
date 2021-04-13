@@ -14,4 +14,8 @@ public interface GroupRepository extends MongoRepository<Group, String>, GroupRe
     Group findByGroupId(String groupId);
 
     List<Group> findByUsersAndProjectId(String users, String projectId);
+
+    Group findByName(String groupName);
+
+    Group findByGuid(String groupGuid);
 }

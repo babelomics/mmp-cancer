@@ -19,5 +19,6 @@ public class DiagnosticPanelSetExportImportDTO {
     private String creationDate;
     private String deletionDate;
     private String exportDate;
+    private Integer currentVersion;
     private List<DiagnosticPanelExportImportDTO> panels;
 }

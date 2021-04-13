@@ -1,9 +1,9 @@
 package com.fujitsu.mmp.msusermanagement.email;
 
+import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.dto.user.UserRegistryRequestDTO;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import com.fujitsu.mmp.msusermanagement.mappers.UserMapper;
-import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.repositories.UserRepository;
 import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,6 +102,7 @@ public class EmailServiceImpl implements EmailService {
                     "Error: Either email or user needs to be provided.",
                     HttpStatus.UNPROCESSABLE_ENTITY);
         }
+
         if(userRepository.existsByIdentifier(identifierOrEmail)){
             entity = userRepository.findByIdentifier(identifierOrEmail);
         }else if (userRepository.existsByEmail(identifierOrEmail)){
@@ -111,8 +112,9 @@ public class EmailServiceImpl implements EmailService {
                     "Error: The email or identifier provided does not exist in the system.",
                     HttpStatus.NOT_FOUND);
         }
+
         sendHTMLMessage(entity.getEmail(),"Your password has been reset","Hello "+entity.getIdentifier()
-                +". Please follow the link below to set a new password: "+generateLink(entity.getIdentifier()));
+                +". Please follow the link below to set a new password: "+generateLink(entity.getIdentifier(), entity.getPassword()));
 
         return ResponseEntity.ok(new MessageResponse("Email send correctly!"));
     }
@@ -123,20 +125,19 @@ public class EmailServiceImpl implements EmailService {
         String subject;
         if(userRegistryRequestDTO.getAttended().equals("approve")){
             subject = "Request approved";
-            text = "Your access request has been approved: "+generateLink(userRegistryRequestDTO.getIdentifier());
+            text = "Your access request has been approved: "+generateLink(userRegistryRequestDTO.getIdentifier(), userRepository.findByIdentifier(userRegistryRequestDTO.getIdentifier()).getPassword());
         }else {
             if (userRegistryRequestDTO.getAccessRefusalReason() != null) {
                 text = "Hello " + userRegistryRequestDTO.getIdentifier() + ", we regret to inform you that your application has been rejected.";
-                subject = "Request rejected";
             } else {
                 text = "Hello " + userRegistryRequestDTO.getIdentifier() + ", we regret to inform you that your application has been rejected due the following reasons: " + userRegistryRequestDTO.getAccessRefusalReason();
-                subject = "Request rejected";
             }
+            subject = "Request rejected";
         }
         sendHTMLMessage(userRegistryRequestDTO.getEmail(), subject, text);
     }
 
-    private String generateLink(String identifier) {
-        return "<a href=\""+LINK_URL+jwtUtility.generateTokenForLink(identifier)+"\">link</a>";
+    private String generateLink(String identifier, String password) {
+        return "<a href=\""+LINK_URL+jwtUtility.generateTokenForLink(identifier, password)+"\">link</a>";
     }
 }

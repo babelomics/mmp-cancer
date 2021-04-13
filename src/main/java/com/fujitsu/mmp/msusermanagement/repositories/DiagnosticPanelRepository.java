@@ -12,8 +12,6 @@ public interface DiagnosticPanelRepository extends MongoRepository<DiagnosticPan
 
     List<DiagnosticPanel> findDiagnosticPanelByDiagnosticPanelSetIdentifier(String diagnosticPanelSetIdentifier);
 
-    List <DiagnosticPanel> findByDiagnosticPanelIdentifier(String diagnosticPanelIdentifier);
-
     List<DiagnosticPanel> findDiagnosticPanelByDiagnosticPanelSetIdentifierAndDiagnosticPanelIdentifier(String diagnosticPanelSetIdentifier, String diagnosticPanelIdentifier);
 
     List<DiagnosticPanel> findDiagnosticPanelByParentIdsAndDiagnosticPanelSetIdentifier(String diagnosticPanelIdentifier, String diagnosticPanelSetIdentifier);
@@ -35,4 +33,6 @@ public interface DiagnosticPanelRepository extends MongoRepository<DiagnosticPan
     List<DiagnosticPanel> findByDiagnosticPanelSetIdentifierAndDiagnosticPanelIdentifier(String diagnosticPanelSetIdentifier, String diagnosticPanelIdentifier);
 
     boolean existsByDiagnosticPanelSetIdentifierAndNameAndStatus(String diagnosticPanelSetIdentifier, String name, EStatus current);
+
+    List<DiagnosticPanel> findDiagnosticPanelByDiagnosticPanelSetIdentifierAndStatusAndDiagnosticPanelIdentifierIn(String diagnosticPanelSetIdentifier, EStatus current, List<String> panelsId);
 }

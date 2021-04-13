@@ -13,10 +13,15 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Permission {
     @Id
     private String id;
-
     private String action;
     private String entityType;
     private String entityId;
     private String userId;
 
+    public Permission(String action, String entityType, String entityId, String userId) {
+        this.action = action;
+        this.entityType = entityType;
+        this.entityId = entityId;
+        this.userId = userId;
+    }
 }

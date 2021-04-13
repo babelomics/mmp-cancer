@@ -1,7 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.entities;
 
 
-import com.fujitsu.mmp.msusermanagement.dto.group.PermissionDTO;
+import com.fujitsu.mmp.msusermanagement.dto.permission.PermissionDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

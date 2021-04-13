@@ -4,11 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
-import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -24,4 +22,5 @@ public class DiagnosticPanelSet {
     private String author;
     private Date creationDate;
     private Date deletionDate;
+    private Integer currentVersion;
 }

@@ -1,7 +1,7 @@
 package com.fujitsu.mmp.msusermanagement.repositories;
 
-import com.fujitsu.mmp.msusermanagement.dto.group.PermissionDTO;
-import com.fujitsu.mmp.msusermanagement.dto.group.filters.FilterUsersGroupsDTO;
+import com.fujitsu.mmp.msusermanagement.dto.permission.PermissionDTO;
+import com.fujitsu.mmp.msusermanagement.dto.group.filters.FilterGroupsDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Group;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -20,25 +20,28 @@ public class GroupRepositoryCustomImpl implements GroupRepositoryCustom {
     MongoTemplate mongoTemplate;
 
     @Override
-    public Page<Group> findUsersGroupsByFilters(FilterUsersGroupsDTO filterUsersGroupsDTO, Pageable page) {
+    public Page<Group> findGroupsByFiltersAndProjectId(FilterGroupsDTO filterGroupsDTO, Pageable page, String projectId) {
 
         final Query query = new Query().with(page);
         final List<Criteria> criteria = new ArrayList<>();
 
-        if (filterUsersGroupsDTO.getSearch() != null && !filterUsersGroupsDTO.getSearch().isEmpty()) {
+        Criteria projectIdCriteria = Criteria.where("projectId").is(projectId);
+        criteria.add(projectIdCriteria);
+
+        if (filterGroupsDTO.getSearch() != null && !filterGroupsDTO.getSearch().isEmpty()) {
             Criteria searchCriteria = new Criteria();
             searchCriteria.orOperator(
-                    Criteria.where("groupId").regex(Pattern.quote(filterUsersGroupsDTO.getSearch()), "i"),
-                    Criteria.where("name").regex(Pattern.quote(filterUsersGroupsDTO.getSearch()), "i"),
-                    Criteria.where("description").regex(Pattern.quote(filterUsersGroupsDTO.getSearch()), "i"));
+                    Criteria.where("groupId").regex(Pattern.quote(filterGroupsDTO.getSearch()), "i"),
+                    Criteria.where("name").regex(Pattern.quote(filterGroupsDTO.getSearch()), "i"),
+                    Criteria.where("description").regex(Pattern.quote(filterGroupsDTO.getSearch()), "i"));
             criteria.add(searchCriteria);
         }
 
-        if (filterUsersGroupsDTO.getPermission() != null) {
+        if (filterGroupsDTO.getPermission() != null) {
             Criteria filterCriteria = new Criteria();
             filterCriteria.orOperator(
-                    Criteria.where("permission.entityType").regex(Pattern.quote(filterUsersGroupsDTO.getPermission()), "i"),
-                    Criteria.where("permission.action").regex(Pattern.quote(filterUsersGroupsDTO.getPermission()), "i"));
+                    Criteria.where("permissions.entityType").regex(Pattern.quote(filterGroupsDTO.getPermission()), "i"),
+                    Criteria.where("permissions.action").regex(Pattern.quote(filterGroupsDTO.getPermission()), "i"));
             criteria.add(filterCriteria);
         }
 
@@ -54,7 +57,7 @@ public class GroupRepositoryCustomImpl implements GroupRepositoryCustom {
     }
 
     @Override
-    public Boolean hasPermissionsInAnotherGroup(String userId, String groupId, PermissionDTO permissions) {
+    public Boolean hasPermissionsInAnotherGroup(String userId, String groupName, PermissionDTO permissions) {
         Query query = new Query();
 
         Criteria permissionCriteria = Criteria.where("permissions").elemMatch(
@@ -65,7 +68,7 @@ public class GroupRepositoryCustomImpl implements GroupRepositoryCustom {
                 .and("entityId")
                 .is(permissions.getEntityId());
 
-        Criteria excludeCurrentGroupCriteria = Criteria.where("groupId").ne(groupId);
+        Criteria excludeCurrentGroupCriteria = Criteria.where("name").ne(groupName);
 
         Criteria userCriteria = Criteria.where("users").is(userId);
 

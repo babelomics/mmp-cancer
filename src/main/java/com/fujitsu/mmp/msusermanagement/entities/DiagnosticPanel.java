@@ -28,4 +28,6 @@ public class DiagnosticPanel {
     private Date deletionDate;
     private String diagnosticPanelSetIdentifier;
     private String previousVersion;
+    private Integer startVersion;
+    private Integer endVersion;
 }

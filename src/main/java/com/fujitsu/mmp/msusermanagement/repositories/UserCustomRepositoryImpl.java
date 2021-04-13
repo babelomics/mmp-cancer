@@ -1,11 +1,17 @@
 package com.fujitsu.mmp.msusermanagement.repositories;
 
+import com.fujitsu.mmp.msusermanagement.constants.EPermissionEntityType;
+import com.fujitsu.mmp.msusermanagement.dto.group.filters.FilterUsersPermissionsDTO;
+import com.fujitsu.mmp.msusermanagement.dto.permission.UserProjectPermissionDTO;
 import com.fujitsu.mmp.msusermanagement.dto.user.filters.FilterUserDTO;
+import com.fujitsu.mmp.msusermanagement.entities.Project;
 import com.fujitsu.mmp.msusermanagement.entities.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.repository.support.PageableExecutionUtils;
@@ -14,6 +20,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.fields;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
 
 public class UserCustomRepositoryImpl implements UserCustomRepository {
 
@@ -110,6 +119,197 @@ public class UserCustomRepositoryImpl implements UserCustomRepository {
                 userList,
                 page,
                 () -> mongoTemplate.count(Query.of(query).limit(-1).skip(-1), User.class));
+    }
+
+    @Override
+    public Page<UserProjectPermissionDTO> findUsersPermissionsByFiltersAndProjectId(FilterUsersPermissionsDTO filterUsersPermissionsDTO, Pageable page, String projectId) {
+        LookupOperation lookupPermissions =
+                Aggregation.lookup("permissions","identifier","userId", "permissions");
+
+        LookupOperation lookupGroups =
+                Aggregation.lookup("groups","identifier","users", "groups");
+
+        MatchOperation matchPermissions =
+                Aggregation.match(new Criteria("permissions.entityId").is(projectId));
+
+        ProjectionOperation projectionOperation = project()
+                .andExpression("identifier").as("userId")
+                .and("firstName").concat(" ", fields("lastName")).as("userName")
+                .andExpression("permissions").as("permissions")
+                .andExpression("groups").as("groups");
+
+        Aggregation aggregation
+                = Aggregation.newAggregation(
+                lookupPermissions,
+                lookupGroups,
+                matchPermissions,
+                projectionOperation,
+                Aggregation.skip((long) page.getPageNumber() * page.getPageSize()),
+                Aggregation.limit(page.getPageSize())
+        );
+
+        Aggregation aggregationTotalElements
+                = Aggregation.newAggregation(
+                lookupPermissions,
+                lookupGroups,
+                matchPermissions,
+                projectionOperation
+        );
+
+        AggregationResults<UserProjectPermissionDTO> totalElements
+                = mongoTemplate.aggregate(aggregationTotalElements, "users", UserProjectPermissionDTO.class);
+
+        AggregationResults<UserProjectPermissionDTO> output
+                = mongoTemplate.aggregate(aggregation, "users", UserProjectPermissionDTO.class);
+
+        return new PageImpl<>(output.getMappedResults(), page, totalElements.getMappedResults().size());
+    }
+
+    @Override
+    public Page<UserProjectPermissionDTO> findUsersSpecificPermissionsByFiltersAndProject(FilterUsersPermissionsDTO filterUsersPermissionsDTO, Pageable page, Project project) {
+        LookupOperation lookupPermissions =
+                Aggregation.lookup("permissions","identifier","userId", "permissions");
+
+        List<Criteria> specificCriteriaList = new ArrayList<>();
+
+        Criteria orOperator = new Criteria();
+
+        Criteria filterCriteria = new Criteria();
+
+        Criteria individualsCriteria = new Criteria().andOperator(
+                Criteria.where("permissions.entityType").is(EPermissionEntityType.INDIVIDUAL.getValue()),
+                Criteria.where("permissions.entityId").in(project.getIndividuals())
+        );
+        specificCriteriaList.add(individualsCriteria);
+
+        Criteria sampleCriteria = new Criteria().andOperator(
+                Criteria.where("permissions.entityType").is(EPermissionEntityType.SAMPLE.getValue()),
+                Criteria.where("permissions.entityId").in(project.getSamples())
+        );
+        specificCriteriaList.add(sampleCriteria);
+
+        Criteria drugCriteria = new Criteria().andOperator(
+                Criteria.where("permissions.entityType").is(EPermissionEntityType.DRUG.getValue()),
+                Criteria.where("permissions.entityId").in(project.getDrugs())
+        );
+        specificCriteriaList.add(drugCriteria);
+
+        Criteria diagnosticPanelCriteria = new Criteria().andOperator(
+                Criteria.where("permissions.entityType").is(EPermissionEntityType.DIAGNOSTIC_PANEL.getValue()),
+                Criteria.where("permissions.entityId").in(project.getDiagnosticPanels())
+        );
+        specificCriteriaList.add(diagnosticPanelCriteria);
+
+        Criteria analysisCriteria = new Criteria().andOperator(
+                Criteria.where("permissions.entityType").is(EPermissionEntityType.ANALYSIS.getValue()),
+                Criteria.where("permissions.entityId").in(project.getAnalyses())
+        );
+        specificCriteriaList.add(analysisCriteria);
+
+        if(!specificCriteriaList.isEmpty()) {
+            orOperator = new Criteria().orOperator(specificCriteriaList.toArray(new Criteria[specificCriteriaList.size()]));
+        }
+
+        if (filterUsersPermissionsDTO.getPermission() != null) {
+            filterCriteria.orOperator(
+                    Criteria.where("permission.entityType").regex(Pattern.quote(filterUsersPermissionsDTO.getPermission()), "i"),
+                    Criteria.where("permission.entityId").regex(Pattern.quote(filterUsersPermissionsDTO.getPermission()), "i"),
+                    Criteria.where("permission.action").regex(Pattern.quote(filterUsersPermissionsDTO.getPermission()), "i"));
+        }
+
+        MatchOperation matchPermissions =
+                Aggregation.match(orOperator);
+
+        MatchOperation matchFiltersPermissions =
+                Aggregation.match(filterCriteria);
+
+        ProjectionOperation projectionOperation = project()
+                .andExpression("identifier").as("userId")
+                .and("firstName").concat(" ", fields("lastName")).as("userName")
+                .andExpression("permissions").as("permissions");
+
+        Aggregation aggregation
+                = Aggregation.newAggregation(
+                lookupPermissions,
+                matchPermissions,
+                matchFiltersPermissions,
+                projectionOperation,
+                Aggregation.skip((long) page.getPageNumber() * page.getPageSize()),
+                Aggregation.limit(page.getPageSize())
+        );
+
+        Aggregation aggregationTotalElements
+                = Aggregation.newAggregation(
+                lookupPermissions,
+                matchPermissions,
+                matchFiltersPermissions,
+                projectionOperation
+        );
+
+        AggregationResults<UserProjectPermissionDTO> totalElements
+                = mongoTemplate.aggregate(aggregationTotalElements, "users", UserProjectPermissionDTO.class);
+
+        AggregationResults<UserProjectPermissionDTO> output
+                = mongoTemplate.aggregate(aggregation, "users", UserProjectPermissionDTO.class);
+
+        return new PageImpl<>(output.getMappedResults(), page, totalElements.getMappedResults().size());
+    }
+
+    @Override
+    public Page<UserProjectPermissionDTO> findUsersIndividualPermissions(FilterUsersPermissionsDTO filterUsersPermissionsDTO, Pageable page, String individualId) {
+        LookupOperation lookupPermissions =
+                Aggregation.lookup("permissions","identifier","userId", "permissions");
+
+        Criteria filterCriteria = new Criteria();
+
+        Criteria individualsCriteria = new Criteria().andOperator(
+                Criteria.where("permissions.entityType").is(EPermissionEntityType.INDIVIDUAL.getValue()),
+                Criteria.where("permissions.entityId").is(individualId)
+        );
+
+        if (filterUsersPermissionsDTO.getPermission() != null) {
+            filterCriteria.orOperator(
+                    Criteria.where("permission.entityType").regex(Pattern.quote(filterUsersPermissionsDTO.getPermission()), "i"),
+                    Criteria.where("permission.entityId").regex(Pattern.quote(filterUsersPermissionsDTO.getPermission()), "i"),
+                    Criteria.where("permission.action").regex(Pattern.quote(filterUsersPermissionsDTO.getPermission()), "i"));
+        }
+
+        MatchOperation matchPermissions =
+                Aggregation.match(individualsCriteria);
+
+        MatchOperation matchFiltersPermissions =
+                Aggregation.match(filterCriteria);
+
+        ProjectionOperation projectionOperation = project()
+                .andExpression("identifier").as("userId")
+                .and("firstName").concat(" ", fields("lastName")).as("userName")
+                .andExpression("permissions").as("permissions");
+
+        Aggregation aggregation
+                = Aggregation.newAggregation(
+                lookupPermissions,
+                matchPermissions,
+                matchFiltersPermissions,
+                projectionOperation,
+                Aggregation.skip((long) page.getPageNumber() * page.getPageSize()),
+                Aggregation.limit(page.getPageSize())
+        );
+
+        Aggregation aggregationTotalElements
+                = Aggregation.newAggregation(
+                lookupPermissions,
+                matchPermissions,
+                matchFiltersPermissions,
+                projectionOperation
+        );
+
+        AggregationResults<UserProjectPermissionDTO> totalElements
+                = mongoTemplate.aggregate(aggregationTotalElements, "users", UserProjectPermissionDTO.class);
+
+        AggregationResults<UserProjectPermissionDTO> output
+                = mongoTemplate.aggregate(aggregation, "users", UserProjectPermissionDTO.class);
+
+        return new PageImpl<>(output.getMappedResults(), page, totalElements.getMappedResults().size());
     }
 
 }

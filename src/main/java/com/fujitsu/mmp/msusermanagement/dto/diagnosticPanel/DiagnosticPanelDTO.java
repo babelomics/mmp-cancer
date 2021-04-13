@@ -37,4 +37,6 @@ public class DiagnosticPanelDTO {
     private Boolean ascendingPanels;
     private Boolean descendingPanels;
     private String guid;
+    private Integer startVersion;
+    private Integer endVersion;
 }

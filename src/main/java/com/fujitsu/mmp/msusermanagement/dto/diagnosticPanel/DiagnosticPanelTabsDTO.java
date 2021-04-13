@@ -20,6 +20,7 @@ public class DiagnosticPanelTabsDTO {
     private Date deletionDate;
     private String diagnosticPanelSetIdentifier;
     private String assembly;
+    private String ensmblRelease;
     private Boolean isHuman;
     private String guid;
     private String nextVersion;
@@ -33,4 +34,6 @@ public class DiagnosticPanelTabsDTO {
     private List<DiagnosticPanelParentChildDTO> ascendants;
     private List <DiagnosticPanelParentChildDTO> descendants;
     private Boolean isNewVersion;
+    private Integer startVersion;
+    private Integer endVersion;
 }

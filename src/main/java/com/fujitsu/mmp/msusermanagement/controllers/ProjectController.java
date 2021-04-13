@@ -22,16 +22,6 @@ public class ProjectController {
     private ProjectService projectService;
 
     /**
-     * Create a new Project
-     * @param projectDTO projectDTO to create
-     * @return
-     */
-    @PostMapping("/project")
-    public ResponseEntity<ProjectDTO> createProject(@RequestBody ProjectDTO projectDTO, HttpServletRequest httpServletRequest) {
-        return projectService.createProject(projectDTO, httpServletRequest);
-    }
-
-    /**
      * List all projects with pagination
      * @return list of all projects entities found
      */
@@ -51,13 +41,23 @@ public class ProjectController {
     }
 
     /**
+     * Create a new Project
+     * @param projectDTO projectDTO to create
+     * @return
+     */
+    @PostMapping("/project")
+    public ResponseEntity<ProjectDTO> createProject(@RequestBody ProjectDTO projectDTO, HttpServletRequest httpServletRequest) {
+        return projectService.createProject(projectDTO, httpServletRequest);
+    }
+
+    /**
      * Get details of projects.
      * @param projectId: identifier of the entity to retrieve.
      * @return
      */
     @GetMapping("/project/id/{projectId}")
-    public ResponseEntity<ProjectDTO> getProject(@PathVariable String projectId){
-        return projectService.getProject(projectId);
+    public ResponseEntity<ProjectDTO> getProject(@PathVariable String projectId, HttpServletRequest httpServletRequest){
+        return projectService.getProject(projectId, httpServletRequest);
     }
 
     /**
@@ -67,8 +67,8 @@ public class ProjectController {
      * @return projectDTO updated
      */
     @PutMapping("/project/id/{projectId}")
-    public ResponseEntity<ProjectDTO> updateProject(@PathVariable String projectId, @RequestBody ProjectDTO projectDTO) {
-        return projectService.updateProject(projectId, projectDTO);
+    public ResponseEntity<ProjectDTO> updateProject(@PathVariable String projectId, @RequestBody ProjectDTO projectDTO, HttpServletRequest httpServletRequest) {
+        return projectService.updateProject(projectId, projectDTO, httpServletRequest);
     }
 
     /**
@@ -77,7 +77,7 @@ public class ProjectController {
      * @return
      */
     @DeleteMapping("/id/{projectId}/project")
-    public ResponseEntity<ProjectDTO> deleteProject(@PathVariable String projectId){
-        return projectService.deleteProject(projectId);
+    public ResponseEntity<Void> deleteProject(@PathVariable String projectId, HttpServletRequest httpServletRequest){
+        return projectService.deleteProject(projectId, httpServletRequest);
     }
 }

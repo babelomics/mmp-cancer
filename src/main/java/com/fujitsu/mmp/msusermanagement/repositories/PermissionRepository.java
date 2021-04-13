@@ -19,4 +19,6 @@ public interface PermissionRepository extends MongoRepository<Permission, String
     Permission findByUserIdAndActionAndEntityTypeAndEntityId(String userId, String action, String entityType, String entityId);
 
     List<Permission> findByUserIdAndEntityId(String userId, String projectId);
+
+    List<Permission> findByUserIdAndEntityTypeAndEntityIdIn(String userId, String value, List<String> individuals);
 }

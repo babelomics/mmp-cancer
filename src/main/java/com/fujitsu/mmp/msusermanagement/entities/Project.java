@@ -25,10 +25,11 @@ public class Project {
     private Date deletionDate;
     private String assembly;
     private String ensemblRelease;
-    private List<Object> samples;
-    private List<Object> files;
-    private List<Object> individuals;
-    private List<Object> drugs;
-    private List<Object> diagnosticPanels;
-    private List<Object> analyses;
+    private List<String> samples;
+    private List<String> files;
+    private List<String> individuals;
+    private List<String> drugs;
+    private List<String> diagnosticPanels;
+    private List<String> analyses;
+    private String organism;
 }

@@ -1,6 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.mappers;
 
-import com.fujitsu.mmp.msusermanagement.dto.group.PermissionDTO;
+import com.fujitsu.mmp.msusermanagement.dto.permission.PermissionDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Permission;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;

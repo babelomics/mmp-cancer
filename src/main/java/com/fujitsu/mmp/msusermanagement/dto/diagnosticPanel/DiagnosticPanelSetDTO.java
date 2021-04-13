@@ -23,4 +23,5 @@ public class DiagnosticPanelSetDTO {
     private Date deletionDate;
     private Integer panelsNumber;
     private Boolean isHuman;
+    private Integer currentVersion;
 }

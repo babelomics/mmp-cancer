@@ -1,16 +1,14 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.fujitsu.mmp.msusermanagement.constants.ESource;
+import com.fujitsu.mmp.msusermanagement.constants.EStatus;
+import com.fujitsu.mmp.msusermanagement.constants.EType;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.DiagnosticPanelSetDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.exportimport.DiagnosticPanelExportImportDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.exportimport.DiagnosticPanelSetExportImportDTO;
 import com.fujitsu.mmp.msusermanagement.dto.diagnosticPanel.filters.FilterDiagnosticPanelSetDTO;
-import com.fujitsu.mmp.msusermanagement.apis.genomicdictionaryapi.MetaAssembly;
 import com.fujitsu.mmp.msusermanagement.entities.*;
-import com.fujitsu.mmp.msusermanagement.constants.EStatus;
-import com.fujitsu.mmp.msusermanagement.constants.EType;
 import com.fujitsu.mmp.msusermanagement.mappers.DiagnosticPanelSetMapper;
 import com.fujitsu.mmp.msusermanagement.repositories.*;
 import com.fujitsu.mmp.msusermanagement.utility.JWTUtility;
@@ -85,6 +83,7 @@ public class DiagnosticPanelSetService {
             DiagnosticPanelSet diagnosticPanelSet = diagnosticPanelSetMapper.dtoToEntity(diagnosticPanelSetDTO);
             diagnosticPanelSet.setCreationDate(new Date());
             diagnosticPanelSet.setAuthor(username);
+            diagnosticPanelSet.setCurrentVersion(0);
 
             DiagnosticPanelSet createdDiagnosticPanelSet = diagnosticPanelSetRepository.save(diagnosticPanelSet);
             responseBody = diagnosticPanelSetMapper.entityToDto(createdDiagnosticPanelSet);
@@ -104,7 +103,7 @@ public class DiagnosticPanelSetService {
             responseBody = diagnosticPanelSetMapper.entityToDto(entity);
             List<DiagnosticPanel> diagnosticPanels = diagnosticPanelRepository.findDiagnosticPanelByDiagnosticPanelSetIdentifier(responseBody.getDiagnosticPanelSetIdentifier());
             responseBody.setPanelsNumber(diagnosticPanels.size());
-            responseBody.setIsHuman(isHuman(entity.getReference().getAssembly()));
+            responseBody.setIsHuman(genomicDictionaryService.isHuman(entity.getReference().getAssembly()));
         }
 
         return new ResponseEntity<>(responseBody, responseStatus);
@@ -219,6 +218,7 @@ public class DiagnosticPanelSetService {
         exportObject.setReference(diagnosticPanelSet.getReference());
         exportObject.setAuthor(diagnosticPanelSet.getAuthor());
         exportObject.setCreationDate(diagnosticPanelSet.getCreationDate().toInstant().toString());
+        exportObject.setCurrentVersion(diagnosticPanelSet.getCurrentVersion());
         if (diagnosticPanelSet.getDeletionDate() != null) {
             exportObject.setDeletionDate(diagnosticPanelSet.getDeletionDate().toInstant().toString());
         }
@@ -238,6 +238,8 @@ public class DiagnosticPanelSetService {
             }
             diagnosticPanelExportImportDTO.setAuthor(diagnosticPanel.getAuthor());
             diagnosticPanelExportImportDTO.setCreationDate(diagnosticPanel.getCreationDate().toInstant().toString());
+            diagnosticPanelExportImportDTO.setStartVersion(diagnosticPanel.getStartVersion());
+            diagnosticPanelExportImportDTO.setEndVersion(diagnosticPanel.getEndVersion());
             if (diagnosticPanel.getDeletionDate() != null) {
                 diagnosticPanelExportImportDTO.setDeletionDate(diagnosticPanel.getDeletionDate().toInstant().toString());
             }
@@ -265,7 +267,7 @@ public class DiagnosticPanelSetService {
     public ResponseEntity<String> importPanelSet(MultipartFile file, String id, String name, Boolean isOverwritten) {
 
         ObjectMapper mapper = new ObjectMapper();
-        DiagnosticPanelSet savedDiagnosticPanelset = null;
+        DiagnosticPanelSet savedDiagnosticPanelSet = null;
         //TODO THROW EXCEPTION/ ADD EXCEPTIONS
 
         if (file.getOriginalFilename() == null) {
@@ -297,12 +299,24 @@ public class DiagnosticPanelSetService {
                     DiagnosticPanelSetExportImportDTO panelSet =
                             mapper.readValue(file.getBytes(), DiagnosticPanelSetExportImportDTO.class);
 
+                    if(panelSet.getDescription() == null || panelSet.getDescription().isEmpty() || panelSet.getCreationDate() == null || panelSet.getCreationDate().isEmpty()){
+                        return new ResponseEntity<>(
+                                "Error: There are some empty mandatory fields!. CUSTOM_ERROR_CODE: 400_EMPTY_MANDATORY_FIELDS",
+                                HttpStatus.BAD_REQUEST);
+                    }
+
                     panelSet.setName(name);
                     panelSet.setId(id);
 
                     if(checkDateInFutureFromString(panelSet.getCreationDate()) || (panelSet.getDeletionDate() != null && checkDateInFutureFromString(panelSet.getDeletionDate())) || (panelSet.getExportDate() != null && checkDateInFutureFromString(panelSet.getExportDate()))){
                         return new ResponseEntity<>(
                                 "Error: Dates cannot be in the future!. CUSTOM_ERROR_CODE: 422_FUTURE_DATES",
+                                HttpStatus.UNPROCESSABLE_ENTITY);
+                    }
+
+                    if(panelSet.getDeletionDate() != null && getDateFromISO8601(panelSet.getCreationDate()).after(getDateFromISO8601(panelSet.getDeletionDate()))){
+                        return new ResponseEntity<>(
+                                "Error: creation date cannot be later than the deletion date. CUSTOM_ERROR_CODE: 422_INVALID_DATES",
                                 HttpStatus.UNPROCESSABLE_ENTITY);
                     }
 
@@ -313,6 +327,14 @@ public class DiagnosticPanelSetService {
                     }
 
                     for (DiagnosticPanelExportImportDTO panel : panelSet.getPanels()) {
+
+                        if(panel.getDescription() == null || panel.getDescription().isEmpty() || panel.getCreationDate() == null || panel.getName() == null || panel.getName().isEmpty()  || panel.getId() == null || panel.getId().isEmpty()){
+                            return new ResponseEntity<>(
+                                    "Error: There are some empty mandatory fields!. CUSTOM_ERROR_CODE: 400_EMPTY_MANDATORY_FIELDS",
+                                    HttpStatus.BAD_REQUEST);
+                        }
+
+                        panel.setParentIds(panel.getParentIds().stream().distinct().collect(Collectors.toList()));
 
                         if(panel.getAssociations() != null) {
                             List<DiagnosticPanelAssociation> icd10List = panel.getAssociations().stream()
@@ -364,18 +386,17 @@ public class DiagnosticPanelSetService {
 
                             Boolean isInvalidTranscript = transcriptList.stream().anyMatch(temp ->
                                     genomicDictionaryService
-                                            .getTranscript(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.empty()).getTranscriptId() == null);
+                                            .getTranscript(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.ofNullable(panelSet.getReference().getEnsemblRelease())).getTranscriptId() == null);
 
                             Boolean isInvalidGene = geneList.stream().anyMatch(temp ->
                                     genomicDictionaryService
-                                            .getGene(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.empty()).getGeneId() == null);
+                                            .getGene(panelSet.getReference().getAssembly(), temp.getDiagnosticPanelFeatureIdentifier(), Optional.ofNullable(panelSet.getReference().getEnsemblRelease())).getGeneId() == null);
 
                             if (isInvalidTranscript || isInvalidGene || isInvalidRegion || isInvalidVariant) {
                                 return new ResponseEntity<>(
                                         "Error: There are panels with invalid genomic entities (transcripts, genes, variants or regions). CUSTOM_ERROR_CODE: 422_INVALID_TRANSCRIPT",
                                         HttpStatus.UNPROCESSABLE_ENTITY);
                             }
-
                         }
 
                         if(checkDateInFutureFromString(panel.getCreationDate()) || (panel.getDeletionDate() != null && checkDateInFutureFromString(panel.getDeletionDate()))){
@@ -395,6 +416,12 @@ public class DiagnosticPanelSetService {
                                         "Error: some panels contains references to panels that do not exist. CUSTOM_ERROR_CODE: 422_INVALID_REFERENCES",
                                         HttpStatus.UNPROCESSABLE_ENTITY);
                             }
+                        }
+
+                        if(panel.getDeletionDate() != null && getDateFromISO8601(panel.getCreationDate()).after(getDateFromISO8601(panel.getDeletionDate()))){
+                            return new ResponseEntity<>(
+                                    "Error: creation date cannot be later than the deletion date. CUSTOM_ERROR_CODE: 422_INVALID_DATES",
+                                    HttpStatus.UNPROCESSABLE_ENTITY);
                         }
                     }
 
@@ -470,6 +497,7 @@ public class DiagnosticPanelSetService {
                     diagnosticPanelSet.setDescription(panelSet.getDescription());
                     diagnosticPanelSet.setReference(panelSet.getReference());
                     diagnosticPanelSet.setAuthor(panelSet.getAuthor());
+                    diagnosticPanelSet.setCurrentVersion(panelSet.getCurrentVersion());
                     diagnosticPanelSet.setCreationDate(getDateFromISO8601(panelSet.getCreationDate()));
                     if(panelSet.getDeletionDate() != null) {
                         diagnosticPanelSet.setDeletionDate(getDateFromISO8601(panelSet.getDeletionDate()));
@@ -487,7 +515,10 @@ public class DiagnosticPanelSetService {
                         diagnosticPanel.setParentIds(panel.getParentIds());
                         diagnosticPanel.setDiagnosticPanelSetIdentifier(panelSet.getId());
                         diagnosticPanel.setCreationDate(getDateFromISO8601(panel.getCreationDate()));
-
+                        diagnosticPanel.setStartVersion(panel.getStartVersion());
+                        if(panel.getEndVersion() != null) {
+                            diagnosticPanel.setEndVersion(panel.getEndVersion());
+                        }
                         if(panel.getDeletionDate() != null){
                             diagnosticPanel.setDeletionDate(getDateFromISO8601(panel.getDeletionDate()));
                             diagnosticPanel.setStatus(EStatus.ARCHIVED);
@@ -522,7 +553,7 @@ public class DiagnosticPanelSetService {
 
                     });
 
-                    savedDiagnosticPanelset = diagnosticPanelSetRepository.save(diagnosticPanelSet);
+                    savedDiagnosticPanelSet = diagnosticPanelSetRepository.save(diagnosticPanelSet);
 
                     List<String> auxList = new ArrayList<>();
 
@@ -557,11 +588,12 @@ public class DiagnosticPanelSetService {
                     });
 
                 } catch (IOException e) {
+                    //TODO ADD LOG
                     e.printStackTrace();
                 }
             }
         }
-        return new ResponseEntity<>("Imported successfully! [ "+ (savedDiagnosticPanelset != null ? savedDiagnosticPanelset.getDiagnosticPanelSetIdentifier() : "unexpected error") +" ]", HttpStatus.OK);
+        return new ResponseEntity<>("Imported successfully! [ "+ (savedDiagnosticPanelSet != null ? savedDiagnosticPanelSet.getDiagnosticPanelSetIdentifier() : "unexpected error") +" ]", HttpStatus.OK);
     }
 
     private String getFileExtension(String fileName) {
@@ -578,11 +610,6 @@ public class DiagnosticPanelSetService {
         TemporalAccessor ta = DateTimeFormatter.ISO_INSTANT.parse(s);
         Instant i = Instant.from(ta);
         return Date.from(i);
-    }
-
-    private Boolean isHuman (String assemblyAccession) {
-        MetaAssembly metaAssembly = genomicDictionaryService.getMetaAssembly(assemblyAccession);
-        return metaAssembly.getAssembly().getSpecies().getTaxonomyId().equals(9606);
     }
 
     private Boolean checkDateInFutureFromString (String date){

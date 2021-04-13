@@ -15,10 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserRegistryRequestService {
@@ -40,6 +42,9 @@ public class UserRegistryRequestService {
 
     @Autowired
     UserRegistryRequestMapper userRegistryRequestMapper;
+
+    @Autowired
+    PasswordEncoder encoder;
 
     public ResponseEntity<?> createUserRegistryRequest(UserRegistryRequestDTO userRegistryRequestDTO) {
         HttpStatus responseStatus = HttpStatus.CREATED;
@@ -129,7 +134,10 @@ public class UserRegistryRequestService {
                 userDTO.setIdentifier(userRegistryRequestDTO.getIdentifier());
                 userDTO.setEmail(userRegistryRequestDTO.getEmail());
                 userDTO.setDateCreated(new Date());
+
                 User user = userMapper.dtoToEntity(userDTO);
+
+                user.setPassword(encoder.encode(UUID.randomUUID().toString()));
 
                 userRepository.save(user);
 

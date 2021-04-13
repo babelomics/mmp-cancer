@@ -16,8 +16,8 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -184,6 +184,13 @@ public class GenomicDictionaryService {
                 .block();
     }
 
+    public List<HPO> getHpoPhenotypicAbnormalityList () {
+        List<String> phenotypicAbnormalityDescendants =
+                new ArrayList<>(getHpo("HP:0000118").getChildren());
+
+        return phenotypicAbnormalityDescendants.stream().map(this::getHpo).collect(Collectors.toList());
+    }
+
     //TODO: Check if web client is the best approach
     public Gene getGene(String assemblyAccession, String geneId, Optional<String> schemaVersion) {
 
@@ -306,5 +313,10 @@ public class GenomicDictionaryService {
             }
 
         return new ResponseEntity<>(responseBody, responseStatus);
+    }
+
+    public Boolean isHuman(String assemblyAccession) {
+        MetaAssembly metaAssembly = getMetaAssembly(assemblyAccession);
+        return metaAssembly.getAssembly().getSpecies().getTaxonomyId().equals(9606);
     }
 }

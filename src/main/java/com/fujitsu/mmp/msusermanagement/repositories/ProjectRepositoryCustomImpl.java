@@ -1,7 +1,12 @@
 package com.fujitsu.mmp.msusermanagement.repositories;
 
 import com.fujitsu.mmp.msusermanagement.apis.genomicdictionaryapi.Assembly;
+import com.fujitsu.mmp.msusermanagement.constants.EPermissionAction;
+import com.fujitsu.mmp.msusermanagement.constants.EPermissionEntityType;
+import com.fujitsu.mmp.msusermanagement.constants.UserConstants;
+import com.fujitsu.mmp.msusermanagement.dto.permission.PermissionDTO;
 import com.fujitsu.mmp.msusermanagement.dto.project.filters.FilterProjectDTO;
+import com.fujitsu.mmp.msusermanagement.dto.user.UserPermissionDTO;
 import com.fujitsu.mmp.msusermanagement.entities.Project;
 import com.fujitsu.mmp.msusermanagement.services.GenomicDictionaryService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,11 +32,77 @@ public class ProjectRepositoryCustomImpl implements ProjectRepositoryCustom{
     GenomicDictionaryService genomicDictionaryService;
 
     @Override
-    public Page<Project> findProjectByFilters(FilterProjectDTO filterProjectDTO, Pageable page) {
+    public Page<Project> findProjectByFilters(FilterProjectDTO filterProjectDTO, Pageable page, UserPermissionDTO userPermissions) {
         final Query query = new Query().with(page);
         final List<Criteria> criteria = new ArrayList<>();
 
         Date dateCreatedEndWithTime = null;
+
+        //TODO: USER ENUMS
+
+        if(userPermissions != null && !userPermissions.getUserType().equals(UserConstants.USER_TYPE_ADMIN)) {
+            boolean hasReadProjectUndefined =  userPermissions.getPermissionList().stream()
+                    .anyMatch(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.PROJECTS.getValue()) && permission.getEntityId().equals("undefined"));
+
+            if(!hasReadProjectUndefined) {
+                List<String> projectIdList = userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.PROJECT.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList());
+
+                projectIdList.addAll(userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.SAMPLES.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList()));
+
+                projectIdList.addAll(userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.INDIVIDUALS.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList()));
+
+                projectIdList.addAll(userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.DRUGS.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList()));
+
+                projectIdList.addAll(userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.DIAGNOSTIC_PANELS.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList()));
+
+                projectIdList.addAll(userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.ANALYSES.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList()));
+
+                List<String> individualList = userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.INDIVIDUAL.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList());
+
+                List<String> sampleList = userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.SAMPLE.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList());
+
+                List<String> diagnosticPanelsList = userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.DIAGNOSTIC_PANEL.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList());
+
+                List<String> analysisList = userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.ANALYSIS.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList());
+
+                List<String> drugList = userPermissions.getPermissionList().stream()
+                        .filter(permission -> permission.getAction().equals(EPermissionAction.READ.getValue()) && permission.getEntityType().equals(EPermissionEntityType.DRUG.getValue()))
+                        .map(PermissionDTO::getEntityId).collect(Collectors.toList());
+
+                Criteria orOperator = new Criteria();
+
+                orOperator.orOperator(
+                        Criteria.where("projectId").in(projectIdList),
+                        Criteria.where("individuals").in(individualList),
+                        Criteria.where("samples").in(sampleList),
+                        Criteria.where("diagnosticPanels").in(diagnosticPanelsList),
+                        Criteria.where("analyses").in(analysisList),
+                        Criteria.where("drugs").in(drugList)
+                );
+
+                criteria.add(orOperator);
+            }
+        }
 
         if(filterProjectDTO.getCreationDateEnd() != null){
             dateCreatedEndWithTime = new Date((filterProjectDTO.getCreationDateEnd().getTime()+(3600000*23+3599999)));

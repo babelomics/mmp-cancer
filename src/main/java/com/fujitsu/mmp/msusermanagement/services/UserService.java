@@ -1,5 +1,6 @@
 package com.fujitsu.mmp.msusermanagement.services;
 
+import com.fujitsu.mmp.msusermanagement.constants.*;
 import com.fujitsu.mmp.msusermanagement.dto.jwt.response.MessageResponse;
 import com.fujitsu.mmp.msusermanagement.dto.user.UserDTO;
 import com.fujitsu.mmp.msusermanagement.dto.user.UserHistoryDTO;
@@ -25,8 +26,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -75,6 +78,7 @@ public class UserService {
 
         User user = userMapper.dtoToEntity(userDTO);
         user.setDateCreated(new Date());
+        user.setPassword(encoder.encode(UUID.randomUUID().toString()));
 
         userRepository.save(user);
 
@@ -142,10 +146,10 @@ public class UserService {
             User entity = userRepository.findByIdentifier(identifier);
             if (entity == null) {
                 responseStatus = HttpStatus.NOT_FOUND;
-            } else if (entity.getUserType().equals("Admin") && !entity.getUserType().equals(userDTO.getUserType()) &&
+            } else if (entity.getUserType().equals(UserConstants.USER_TYPE_ADMIN) && !entity.getUserType().equals(userDTO.getUserType()) &&
                     userRepository.countByUserType(entity.getUserType()) <= 1) {
                 responseStatus = HttpStatus.LOCKED;
-            } else if (entity.getUserType().equals("Admin") && !entity.getUserType().equals(userDTO.getUserType()) &&
+            } else if (entity.getUserType().equals(UserConstants.USER_TYPE_ADMIN) && !entity.getUserType().equals(userDTO.getUserType()) &&
             configurationRepository.findByContactIdentifier(identifier) != null){
                 responseStatus = HttpStatus.EXPECTATION_FAILED;
             } else if (!entity.getVersion().equals(userDTO.getVersion())) {
@@ -166,7 +170,8 @@ public class UserService {
                         createProjectPermission(entityToSave.getIdentifier());
                         responseBody.setCanCreateProject(true);
                     } else {
-                        permissionRepository.delete(permissionRepository.findByUserIdAndActionAndEntityType(entityToSave.getIdentifier(), "create", "projects"));
+                        permissionRepository.delete(permissionRepository.findByUserIdAndActionAndEntityType(entityToSave.getIdentifier(), EPermissionAction.CREATE.getValue(), EPermissionEntityType.PROJECTS.getValue()));
+                        permissionRepository.delete(permissionRepository.findByUserIdAndActionAndEntityType(entityToSave.getIdentifier(), EPermissionAction.READ.getValue(), EPermissionEntityType.PROJECTS.getValue()));
                         responseBody.setCanCreateProject(false);
                     }
                 }
@@ -184,7 +189,7 @@ public class UserService {
         if (elementToDelete == null) {
             responseStatus = HttpStatus.NOT_FOUND;
         } else {
-            if(elementToDelete.getUserType().equals("Admin")){
+            if(elementToDelete.getUserType().equals(UserConstants.USER_TYPE_ADMIN)){
                 if(userRepository.countByUserType(elementToDelete.getUserType()) <= 1){
                     return new ResponseEntity<>(
                             "Error: It is necessary to have at least one administrator in the system!",
@@ -236,6 +241,7 @@ public class UserService {
                 entity.setPassword(encoder.encode(password));
                 entity = userRepository.save(entity);
                 responseBody = userMapper.entityToDTO(entity);
+                responseBody.setCanCreateProject(permissionRepository.existsByUserIdAndActionAndEntityType(entity.getIdentifier(), "create", "projects"));
             }
         }
         return new ResponseEntity<>(responseBody, responseStatus);
@@ -243,14 +249,15 @@ public class UserService {
 
     private void createProjectPermission(String userId) {
 
-        Permission permission = new Permission();
+        Permission createProjectPermission = new Permission(EPermissionAction.CREATE.getValue(),EPermissionEntityType.PROJECTS.getValue(), "undefined",userId);
+        Permission readProjectPermission = new Permission(EPermissionAction.READ.getValue(),EPermissionEntityType.PROJECTS.getValue(),"undefined",userId);
 
-        permission.setAction("create");
-        permission.setEntityType("projects");
-        permission.setEntityId("undefined");
-        permission.setUserId(userId);
+        List<Permission> permissionList = new ArrayList<>();
 
-        permissionRepository.save(permission);
+        permissionList.add(createProjectPermission);
+        permissionList.add(readProjectPermission);
+
+        permissionRepository.saveAll(permissionList);
     }
 
     public ResponseEntity<UserPermissionDTO> getPermissions(HttpServletRequest request) {
@@ -265,10 +272,10 @@ public class UserService {
             username = jwtUtility.getUsernameFromToken(token.substring(6));
         }
 
-        if(userRepository.findByIdentifier(username).getUserType().equals("Admin")){
-            responseBody.setUserType("Admin");
+        if (userRepository.findByIdentifier(username).getUserType().equals(UserConstants.USER_TYPE_ADMIN)) {
+            responseBody.setUserType(UserConstants.USER_TYPE_ADMIN);
         } else {
-            responseBody.setUserType("User");
+            responseBody.setUserType(UserConstants.USER_TYPE_USER);
             permissionList = permissionRepository.findByUserId(username);
             responseBody.setPermissionList(permissionMapper.listEntityToListDto(permissionList));
         }

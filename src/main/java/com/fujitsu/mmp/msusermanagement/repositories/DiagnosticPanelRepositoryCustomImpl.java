@@ -103,10 +103,10 @@ public class DiagnosticPanelRepositoryCustomImpl implements DiagnosticPanelRepos
 
         if (filterDiagnosticPanelDTO.getDescendingPanels() != null) {
             if(filterDiagnosticPanelDTO.getDescendingPanels()) {
-                criteria.add((Criteria.where("diagnosticPanelIdentifier")).in(allParents));
+                criteria.add((Criteria.where("_id")).in(allParents));
             }
             else {
-                criteria.add((Criteria.where("diagnosticPanelIdentifier")).nin(allParents));
+                criteria.add((Criteria.where("_id")).nin(allParents));
             }
         }
 

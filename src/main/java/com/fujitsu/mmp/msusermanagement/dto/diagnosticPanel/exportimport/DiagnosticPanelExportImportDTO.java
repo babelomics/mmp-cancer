@@ -22,5 +22,7 @@ public class DiagnosticPanelExportImportDTO {
     private List<String> parentIds;
     private String creationDate;
     private String deletionDate;
+    private Integer startVersion;
+    private Integer endVersion;
     private String guid;
 }
