@@ -118,10 +118,10 @@ public class DrugSetService {
         return drugUpdateService.findByDrugSetId(drugSetId);
     }
 
-    public DrugUpdate updateDrugSet(UUID drugSet){
+    public DrugUpdate updateDrugSet(DrugSet drugSet){
 
         DrugUpdate drugUpdate = new DrugUpdate();
-        drugUpdate.setDrugSetId(drugSet);
+        drugUpdate.setDrugSetId(drugSet.getId());
         List<DrugUpdate> drugUpdateList = drugUpdateService.findAll();
         drugUpdateList.get(drugUpdateList.size()-1).setNextUpdateId(drugUpdate.getId());
         drugUpdate.setPreviousUpdateId(drugUpdateList.get(drugUpdateList.size()-1).getId());

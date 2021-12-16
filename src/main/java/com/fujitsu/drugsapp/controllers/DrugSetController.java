@@ -59,11 +59,11 @@ public class DrugSetController {
     }
 
     @PostMapping("/{id}/update")
-    public ResponseEntity<DrugUpdate> updateDrugSet(@PathVariable("id") String id) {
-        if (drugSetService.existById(UUID.fromString(id))) {
-            return new ResponseEntity<>(drugSetService.updateDrugSet(UUID.fromString(id)), HttpStatus.ACCEPTED);
+    public ResponseEntity<DrugUpdate> updateDrugSet(@RequestBody DrugSet drugSet) {
+        if (drugSetService.existById(drugSet.getId())) {
+            return new ResponseEntity<>(drugSetService.updateDrugSet(drugSet), HttpStatus.ACCEPTED);
         }
-        throw new IllegalArgumentException("DrugSet with id " + id + "not found");
+        throw new IllegalArgumentException("DrugSet with id " + drugSet.getId() + "not found");
     }
     @DeleteMapping("/{id}/delete")
     public ResponseEntity<HttpStatus> deleteDrugSet(@PathVariable("id") String id) {
