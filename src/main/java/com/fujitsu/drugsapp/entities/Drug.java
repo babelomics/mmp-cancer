@@ -22,7 +22,7 @@ public class Drug {
     private UUID startUpdate = UUID.randomUUID();
 
     @Column
-    private UUID endUpdate;
+    private UUID endUpdate = UUID.randomUUID();
 
     @Column
     private String standardName;

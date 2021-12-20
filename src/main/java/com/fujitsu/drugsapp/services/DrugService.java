@@ -1,10 +1,14 @@
 package com.fujitsu.drugsapp.services;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
+import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -13,7 +17,7 @@ import java.util.UUID;
 @Service
 public class DrugService {
 
-    private DrugRepository drugRepository;
+    private final DrugRepository drugRepository;
 
     public List<Drug> findAll(){ return drugRepository.findAll(); }
 

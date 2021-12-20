@@ -1,12 +1,11 @@
 package com.fujitsu.drugsapp.entities;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fujitsu.drugsapp.entities.DrugSet;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -14,6 +13,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @Setter
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class DrugUpdate {
 
     @Id

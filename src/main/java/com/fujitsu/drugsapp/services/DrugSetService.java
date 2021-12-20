@@ -1,5 +1,6 @@
 package com.fujitsu.drugsapp.services;
 
+import com.fujitsu.drugsapp.entities.DrugUpdate;
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugSet;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @AllArgsConstructor
@@ -20,6 +20,7 @@ public class DrugSetService {
     private final DrugSetRepository drugSetRepository;
     private final DrugRepository drugRepository;
     private final DrugService drugService;
+    private final DrugUpdateService drugUpdateService;
 
     public List<DrugSet> findAll(String searchText){
 
@@ -42,7 +43,7 @@ public class DrugSetService {
         return drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
     }
 
-    public List<Drug> findDrugsById(UUID uuid, String searchText, LocalDateTime date) {
+    public List<Drug> findDrugsById(UUID uuid, String searchText, Instant date) {
         DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
         List<Drug> matchedDrugs = new ArrayList<>();
         List<Drug> drugs = drugRepository.findAll();
@@ -57,17 +58,17 @@ public class DrugSetService {
                     matchedDrugs.add(drugs.get(i));
             }
         }else if(searchText==null && date!=null){
-
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
             for(int i=0; i<drugs.size(); ++i){
-                if(drugSet.getUpdateAt().isEqual(date))
+                if(drugSet.getUpdateAt().isEqual(localDateTime))
                             matchedDrugs.add(drugs.get(i));
             }
         }else {
-
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
             List<Drug> matchedDrugsAux = new ArrayList<>();
 
             for(int i=0; i<drugs.size(); ++i){
-                if(drugSet.getUpdateAt().isEqual(date))
+                if(drugSet.getUpdateAt().isEqual(localDateTime))
                     matchedDrugsAux.add(drugs.get(i));
             }
 
@@ -96,6 +97,9 @@ public class DrugSetService {
             }
         }
 
+        DrugUpdate drugUpdate = registerUpdate(drugSet.getId());
+        drugUpdateService.saveDrugUpdate(drugUpdate);
+
         return drugSetRepository.save(drugSet);
     }
 
@@ -103,8 +107,28 @@ public class DrugSetService {
         drugSetRepository.deleteById(uuid);
     }
 
-    public DrugSet updateDrugSet(DrugSet drugSet){
-        return drugSetRepository.save(drugSet);
+    public DrugUpdate registerUpdate(UUID drugSetId){
+        DrugUpdate drugUpdate = new DrugUpdate();
+        drugUpdate.setDrugSetId(drugSetId);
+
+        return drugUpdate;
+    }
+
+    public List<DrugUpdate> getDrugSetUpdates(UUID drugSetId){
+        return drugUpdateService.findByDrugSetId(drugSetId);
+    }
+
+    public DrugUpdate updateDrugSet(DrugSet drugSet){
+
+        DrugUpdate drugUpdate = new DrugUpdate();
+        drugUpdate.setDrugSetId(drugSet.getId());
+        List<DrugUpdate> drugUpdateList = drugUpdateService.findAll();
+        drugUpdateList.get(drugUpdateList.size()-1).setNextUpdateId(drugUpdate.getId());
+        drugUpdate.setPreviousUpdateId(drugUpdateList.get(drugUpdateList.size()-1).getId());
+        drugUpdateService.updateDrugUpdate(drugUpdateList.get(drugUpdateList.size()-1));
+        drugUpdateService.saveDrugUpdate(drugUpdate);
+
+        return drugUpdate;
     }
 
     public boolean existById(UUID uuid){

@@ -2,12 +2,15 @@ package com.fujitsu.drugsapp.controllers;
 
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.services.DrugService;
+import com.fujitsu.drugsapp.services.DrugSetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URISyntaxException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,10 +20,18 @@ import java.util.UUID;
 public class DrugController {
 
     private final DrugService drugService;
+    private final DrugSetService drugSetService;
 
     @GetMapping()
-    public ResponseEntity<List<Drug>> getAllDrugs(){
-        return new ResponseEntity<>(drugService.findAll(), HttpStatus.OK);
+    public ResponseEntity<List<Drug>> getAllDrugs(@RequestParam(required = false) String drugSetId,
+                                                  @RequestParam(required = false) String searchText,
+                                                  @RequestParam(name = "date", required = false) Instant date){
+
+        if(drugSetId==null){
+            return new ResponseEntity<>(drugService.findAll(), HttpStatus.OK);
+        }else {
+            return new ResponseEntity<>(drugSetService.findDrugsById(UUID.fromString(drugSetId), searchText, date), HttpStatus.OK);
+        }
     }
 
     @GetMapping("/{id}")
