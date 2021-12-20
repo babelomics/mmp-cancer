@@ -7,16 +7,12 @@ import com.fujitsu.drugsapp.services.DrugSetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URISyntaxException;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,8 +26,11 @@ public class DrugSetController {
     @Autowired
     private DrugSetService drugSetService;
 
+    private DrugsAPIController panDrugsController = new DrugsAPIController();
+
     @GetMapping()
     public ResponseEntity<List<DrugSet>> getAllDrugSets(@RequestParam(required = false) String searchText){
+        panDrugsController.getAllDrugs();
         return new ResponseEntity<>(drugSetService.findAll(searchText), HttpStatus.OK);
     }
 
