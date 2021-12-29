@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,8 +41,8 @@ public class Drug {
     private DrugSet drugSet;
 
     @OneToMany
-    private List<DrugName> drugNames;
+    private List<DrugName> drugNames = new ArrayList<>();
 
     @OneToMany
-    private List<DrugSource> drugSources;
+    private List<DrugSource> drugSources = new ArrayList<>();
 }

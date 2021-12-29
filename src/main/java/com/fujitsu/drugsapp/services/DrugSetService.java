@@ -1,8 +1,6 @@
 package com.fujitsu.drugsapp.services;
 
-import com.fujitsu.drugsapp.entities.DrugUpdate;
-import com.fujitsu.drugsapp.entities.Drug;
-import com.fujitsu.drugsapp.entities.DrugSet;
+import com.fujitsu.drugsapp.entities.*;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import lombok.AllArgsConstructor;
@@ -21,6 +19,8 @@ public class DrugSetService {
     private final DrugRepository drugRepository;
     private final DrugService drugService;
     private final DrugUpdateService drugUpdateService;
+    private final DrugNameService drugNameService;
+    private final DrugSourceService drugSourceService;
 
     public List<DrugSet> findAll(String searchText){
 
@@ -85,13 +85,19 @@ public class DrugSetService {
     public DrugSet saveDrugSet(DrugSet drugSet){
         List<Drug> newDrugs = drugSet.getDrugs();
         boolean exists = false;
-        UUID uuid = UUID.randomUUID();
-        drugSet.setId(uuid);
 
         for(int i=0; i<newDrugs.size(); ++i) {
             exists = drugService.existByStandardName(newDrugs.get(i));
+
             if(!exists){
+
+                List<DrugName> drugNamesList = newDrugs.get(i).getDrugNames();
+                newDrugs.get(i).setDrugNames(null); //Solucion provisional
+
+                drugSourceService.saveDrugSource(newDrugs.get(i).getDrugSources().get(0));
                 drugService.saveDrug(newDrugs.get(i));
+
+                drugNameService.saveDrugName(drugNamesList.get(0));
             }else{
                 drugSet.getDrugs().remove(i);
             }

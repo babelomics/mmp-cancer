@@ -1,5 +1,6 @@
 package com.fujitsu.drugsapp.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugSet;
 import com.fujitsu.drugsapp.entities.DrugUpdate;
@@ -29,8 +30,10 @@ public class DrugSetController {
     private DrugsAPIController panDrugsController = new DrugsAPIController();
 
     @GetMapping()
-    public ResponseEntity<List<DrugSet>> getAllDrugSets(@RequestParam(required = false) String searchText){
-        panDrugsController.getAllDrugs();
+    public ResponseEntity<List<DrugSet>> getAllDrugSets(@RequestParam(required = false) String searchText) throws JsonProcessingException {
+        DrugSet drugSet = panDrugsController.getAllDrugs();
+        drugSetService.saveDrugSet(drugSet);
+
         return new ResponseEntity<>(drugSetService.findAll(searchText), HttpStatus.OK);
     }
 
@@ -64,6 +67,7 @@ public class DrugSetController {
         }
         throw new IllegalArgumentException("DrugSet with id " + drugSet.getId() + "not found");
     }
+
     @DeleteMapping("/{id}/delete")
     public ResponseEntity<HttpStatus> deleteDrugSet(@PathVariable("id") String id) {
         if (drugSetService.existById(UUID.fromString(id))) {
