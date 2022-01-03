@@ -23,6 +23,12 @@ public class DrugSourceService {
 
     public DrugSource saveDrugSource(DrugSource drugSource){ return drugSourceRepository.save(drugSource); }
 
+    public void saveDrugSourceList(List<DrugSource> drugSourceList){
+
+        for(int i = 0; i < drugSourceList.size(); i++){
+            saveDrugSource(drugSourceList.get(i));
+        }
+    }
     public void deleteDrugSource(UUID id){ drugSourceRepository.deleteById(id); }
 
     public DrugSource updateDrugSource(DrugSource drugSource){

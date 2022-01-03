@@ -9,8 +9,8 @@ spring:
         initialization-mode: always
         driver-class-name: org.postgresql.Driver
         url: jdbc:postgresql://localhost:5432/drugs_db
-        username: admin
-        password: admin1029384756*
+        username:
+        password:
         continueOnError: true
     jpa:
         database-platform: org.hibernate.dialect.PostgreSQL9Dialect

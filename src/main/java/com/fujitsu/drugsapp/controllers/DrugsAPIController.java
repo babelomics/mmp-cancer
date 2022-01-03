@@ -38,7 +38,6 @@ public class DrugsAPIController implements DrugsAPIInterface {
         for(int i = 0; i < pandrugsDTO.size(); ++i){
             Drug drug = new Drug();
             DrugName drugName = new DrugName();
-            DrugSource drugSource = new DrugSource();
 
             drug.setStandardName(pandrugsDTO.get(i).getStandardName());
             drug.setCommonName(pandrugsDTO.get(i).getShowName());
@@ -48,9 +47,12 @@ public class DrugsAPIController implements DrugsAPIInterface {
             drugName.setDrugId(drug.getUuid());
             drug.getDrugNames().add(drugName);
 
-            drugSource.setName(pandrugsDTO.get(i).getSourceName().get(0).getName());
-            drugSource.setShortName(pandrugsDTO.get(i).getSourceName().get(0).getDrugName());
-            drug.getDrugSources().add(drugSource);
+            for(int j = 0; j < pandrugsDTO.get(i).getSourceName().size(); ++j) {
+                DrugSource drugSource = new DrugSource();
+                drugSource.setName(pandrugsDTO.get(i).getSourceName().get(j).getName());
+                drugSource.setShortName(pandrugsDTO.get(i).getSourceName().get(j).getDrugName());
+                drug.getDrugSources().add(drugSource);
+            }
 
             drugs.add(drug);
         }

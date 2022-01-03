@@ -94,7 +94,7 @@ public class DrugSetService {
                 List<DrugName> drugNamesList = newDrugs.get(i).getDrugNames();
                 newDrugs.get(i).setDrugNames(null); //Solucion provisional
 
-                drugSourceService.saveDrugSource(newDrugs.get(i).getDrugSources().get(0));
+                drugSourceService.saveDrugSourceList(newDrugs.get(i).getDrugSources());
                 drugService.saveDrug(newDrugs.get(i));
 
                 drugNameService.saveDrugName(drugNamesList.get(0));
