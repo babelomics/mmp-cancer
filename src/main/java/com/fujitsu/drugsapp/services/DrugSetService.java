@@ -99,9 +99,11 @@ public class DrugSetService {
 
                 drugNameService.saveDrugName(drugNamesList.get(0));
             }else{
-                drugSet.getDrugs().remove(i);
+                drugSet.getDrugs().set(i,null);
             }
         }
+
+        drugSet.getDrugs().removeAll(Collections.singleton(null));
 
         DrugUpdate drugUpdate = registerUpdate(drugSet.getId());
         drugUpdateService.saveDrugUpdate(drugUpdate);
