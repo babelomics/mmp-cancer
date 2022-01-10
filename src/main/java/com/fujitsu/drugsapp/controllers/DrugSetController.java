@@ -32,9 +32,6 @@ public class DrugSetController {
     @GetMapping()
     @CrossOrigin
     public ResponseEntity<List<DrugSet>> getAllDrugSets(@RequestParam(required = false) String searchText) throws JsonProcessingException {
-        //DrugSet drugSet = panDrugsController.getAllDrugs();
-        //drugSetService.saveDrugSet(drugSet);
-
         return new ResponseEntity<>(drugSetService.findAll(searchText), HttpStatus.OK);
     }
 
@@ -56,6 +53,14 @@ public class DrugSetController {
 
         return new ResponseEntity<List<Drug>>(drugSetService.findDrugsById(UUID.fromString(id), searchText, date), HttpStatus.OK);
     }
+
+    @GetMapping("/getPandrugSet")
+    public ResponseEntity<DrugSet> getPandrugSet() throws JsonProcessingException {
+        DrugSet drugSet = panDrugsController.getAllDrugs();
+        drugSetService.saveDrugSet(drugSet);
+        return new ResponseEntity<DrugSet>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
+    }
+
 
     @PostMapping("/new")
     @ResponseBody
