@@ -14,14 +14,17 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class DrugName {
     @Id
-    private UUID sourceId = UUID.randomUUID();
-
-    @Column
-    private UUID drugId;
+    private UUID id = UUID.randomUUID();
 
     @Column
     private String name;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "drug_id", nullable = false)
     private Drug drug;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "drugSource_id", nullable = false)
+    private DrugSource drugSource;
+
 }

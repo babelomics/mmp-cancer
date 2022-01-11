@@ -6,6 +6,8 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Table
@@ -18,15 +20,12 @@ public class DrugSource {
     @Id
     private UUID id = UUID.randomUUID();
 
-    @Column
+    @Column(nullable=false, unique=true)
     private String shortName;
-
-    @Column
-    private String name;
 
     @Column
     private URL url;
 
-    @ManyToOne
-    private Drug drug;
+    @OneToMany(mappedBy = "drugSource", fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    private List<DrugName> drugNames;
 }

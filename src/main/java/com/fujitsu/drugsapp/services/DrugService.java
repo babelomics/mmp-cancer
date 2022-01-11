@@ -1,14 +1,9 @@
 package com.fujitsu.drugsapp.services;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
-import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -26,6 +21,8 @@ public class DrugService {
     }
 
     public Drug saveDrug(Drug drug){ return drugRepository.save(drug); }
+
+    public List<Drug> saveAll(List<Drug> drugList){ return drugRepository.saveAll(drugList); }
 
     public void deleteDrug(UUID id){ drugRepository.deleteById(id); }
 

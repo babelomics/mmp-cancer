@@ -1,5 +1,6 @@
 package com.fujitsu.drugsapp.services;
 
+import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugName;
 import com.fujitsu.drugsapp.repositories.DrugNameRepository;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,8 @@ public class DrugNameService {
     }
 
     public DrugName saveDrugName(DrugName drugName){ return drugNameRepository.save(drugName); }
+
+    public List<DrugName> saveAll(List<DrugName> drugNameList){ return drugNameRepository.saveAll(drugNameList); }
 
     public void deleteDrugName(UUID id){ drugNameRepository.deleteById(id); }
 

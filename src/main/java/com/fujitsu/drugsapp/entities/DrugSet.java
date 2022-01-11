@@ -29,9 +29,9 @@ public class DrugSet {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column
-    private LocalDateTime updateAt;
+    private LocalDateTime updatedAt;
 
-    @OneToMany
+    @OneToMany(mappedBy = "drugSet", fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     private List<Drug> drugs;
 
 }

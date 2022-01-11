@@ -30,10 +30,10 @@ public class DrugSetService {
             List<DrugSet> drugSets = drugSetRepository.findAll();
             List<DrugSet> matchedDrugSets = new ArrayList<>();
 
-            for(int i=0; i<drugSets.size(); ++i){
-                if(drugSets.get(i).getName().toLowerCase().contains(searchText.toLowerCase())
-                        || drugSets.get(i).getDescription().toLowerCase().contains(searchText.toLowerCase()))
-                    matchedDrugSets.add(drugSets.get(i));
+            for (DrugSet drugSet : drugSets) {
+                if (drugSet.getName().toLowerCase().contains(searchText.toLowerCase())
+                        || drugSet.getDescription().toLowerCase().contains(searchText.toLowerCase()))
+                    matchedDrugSets.add(drugSet);
             }
             return matchedDrugSets;
         }
@@ -52,24 +52,24 @@ public class DrugSetService {
             matchedDrugs = drugSet.getDrugs();
         }else if(searchText!=null && date==null){
 
-            for(int i=0; i<drugs.size(); ++i){
-                if(drugs.get(i).getStandardName().toLowerCase().contains(searchText.toLowerCase())
-                        || drugs.get(i).getCommonName().toLowerCase().contains(searchText.toLowerCase()))
-                    matchedDrugs.add(drugs.get(i));
+            for (Drug drug : drugs) {
+                if (drug.getStandardName().toLowerCase().contains(searchText.toLowerCase())
+                        || drug.getCommonName().toLowerCase().contains(searchText.toLowerCase()))
+                    matchedDrugs.add(drug);
             }
         }else if(searchText==null && date!=null){
             LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
-            for(int i=0; i<drugs.size(); ++i){
-                if(drugSet.getUpdateAt().isEqual(localDateTime))
-                            matchedDrugs.add(drugs.get(i));
+            for (Drug drug : drugs) {
+                if (drugSet.getUpdatedAt().isEqual(localDateTime))
+                    matchedDrugs.add(drug);
             }
         }else {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
             List<Drug> matchedDrugsAux = new ArrayList<>();
 
-            for(int i=0; i<drugs.size(); ++i){
-                if(drugSet.getUpdateAt().isEqual(localDateTime))
-                    matchedDrugsAux.add(drugs.get(i));
+            for (Drug drug : drugs) {
+                if (drugSet.getUpdatedAt().isEqual(localDateTime))
+                    matchedDrugsAux.add(drug);
             }
 
             for(int i=0; i<matchedDrugsAux.size(); ++i){
@@ -86,29 +86,51 @@ public class DrugSetService {
         List<Drug> newDrugs = drugSet.getDrugs();
         boolean exists = false;
 
-        for(int i=0; i<newDrugs.size(); ++i) {
-            exists = drugService.existByStandardName(newDrugs.get(i));
-
-            if(!exists){
-
-                List<DrugName> drugNamesList = newDrugs.get(i).getDrugNames();
-                newDrugs.get(i).setDrugNames(null); //Solucion provisional
-
-                drugSourceService.saveDrugSourceList(newDrugs.get(i).getDrugSources());
-                drugService.saveDrug(newDrugs.get(i));
-
-                drugNameService.saveDrugName(drugNamesList.get(0));
-            }else{
-                drugSet.getDrugs().set(i,null);
-            }
-        }
-
-        drugSet.getDrugs().removeAll(Collections.singleton(null));
-
         DrugUpdate drugUpdate = registerUpdate(drugSet.getId());
         drugUpdateService.saveDrugUpdate(drugUpdate);
 
-        return drugSetRepository.save(drugSet);
+        drugSet.setDrugs(null);
+        drugSetRepository.save(drugSet);
+
+        int batchSize = 100;
+        for(int i = 0; i<newDrugs.size(); i += batchSize) {
+            List<Drug> batchDrugs = new ArrayList<>();
+            List<DrugName> batchNames = new ArrayList<>();
+
+            for(int j = i; j<i+ batchSize && j<newDrugs.size() ; ++j) {
+
+                exists = drugService.existByStandardName(newDrugs.get(j));
+
+                if (!exists) {
+
+                    List<DrugName> drugNamesList = newDrugs.get(j).getDrugNames();
+                    newDrugs.get(j).setDrugNames(null);
+                    batchDrugs.add(newDrugs.get(j));
+
+
+                    for (DrugName drugName : drugNamesList) {
+                        drugName.setDrug(newDrugs.get(j));
+                        batchNames.add(drugName);
+
+                        if(!drugSourceService.existByShortName(drugName.getDrugSource())) {
+                            drugSourceService.saveDrugSource(drugName.getDrugSource());
+                        }else{
+                            DrugSource drugSource = drugSourceService.findByShortName(drugName.getDrugSource().getShortName());
+                            drugName.setDrugSource(drugSource);
+                        }
+                    }
+
+                    newDrugs.get(j).setStartUpdate(drugUpdate.getId());
+                    newDrugs.get(j).setDrugSet(drugSet);
+                }
+            }
+
+            drugService.saveAll(batchDrugs);
+            drugNameService.saveAll(batchNames);
+
+        }
+
+        return drugSet;
     }
 
     public void deleteDrugSet(UUID uuid){

@@ -17,32 +17,30 @@ import java.util.UUID;
 public class Drug {
 
     @Id
-    private UUID uuid = UUID.randomUUID();
+    private UUID id = UUID.randomUUID();
 
     @Column
-    private UUID startUpdate = UUID.randomUUID();
+    private UUID startUpdate;
 
     @Column
-    private UUID endUpdate = UUID.randomUUID();
+    private UUID endUpdate;
 
-    @Column
+    @Column(nullable = false, unique = true)
     private String standardName;
 
-    @Column
+    @Column(nullable = false, unique = true)
     private String commonName;
 
     @Column
-    private UUID previousVersion = UUID.randomUUID();
+    private UUID previousVersion;
 
     @Column
     private UUID nextVersion;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "drugset_id", nullable = false)
     private DrugSet drugSet;
 
-    @OneToMany
+    @OneToMany(mappedBy = "drug", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<DrugName> drugNames = new ArrayList<>();
-
-    @OneToMany
-    private List<DrugSource> drugSources = new ArrayList<>();
 }

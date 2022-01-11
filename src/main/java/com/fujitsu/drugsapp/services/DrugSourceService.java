@@ -1,5 +1,7 @@
 package com.fujitsu.drugsapp.services;
 
+import com.fujitsu.drugsapp.entities.Drug;
+import com.fujitsu.drugsapp.entities.DrugName;
 import com.fujitsu.drugsapp.entities.DrugSource;
 import com.fujitsu.drugsapp.repositories.DrugSourceRepository;
 import lombok.AllArgsConstructor;
@@ -21,14 +23,23 @@ public class DrugSourceService {
         return drugSourceRepository.findById(id).orElseThrow(NoSuchElementException::new);
     }
 
+    public DrugSource findByShortName(String shortName){
+
+        List<DrugSource> drugSourceList = findAll();
+
+        for(DrugSource drugSource : drugSourceList){
+            if(shortName.equals(drugSource.getShortName())){
+                return drugSource;
+            }
+        }
+
+        return null;
+    }
+
     public DrugSource saveDrugSource(DrugSource drugSource){ return drugSourceRepository.save(drugSource); }
 
-    public void saveDrugSourceList(List<DrugSource> drugSourceList){
+    public List<DrugSource> saveAll(List<DrugSource> drugSourceList){ return drugSourceRepository.saveAll(drugSourceList); }
 
-        for(int i = 0; i < drugSourceList.size(); i++){
-            saveDrugSource(drugSourceList.get(i));
-        }
-    }
     public void deleteDrugSource(UUID id){ drugSourceRepository.deleteById(id); }
 
     public DrugSource updateDrugSource(DrugSource drugSource){
@@ -37,5 +48,16 @@ public class DrugSourceService {
 
     public boolean existById(UUID uuid){
         return drugSourceRepository.existsById(uuid);
+    }
+
+    public boolean existByShortName(DrugSource drugSource){
+        List<DrugSource> findDrugSource = drugSourceRepository.findAll();
+
+        for(int i=0; i<findDrugSource.size(); ++i){
+            if(drugSource.getShortName().toLowerCase().equals(findDrugSource.get(i).getShortName().toLowerCase()))
+                return true;
+        }
+
+        return false;
     }
 }
