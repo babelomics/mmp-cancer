@@ -57,32 +57,26 @@ public class DrugSetController {
     @GetMapping("/getPandrugSet")
     public ResponseEntity<DrugSet> getPandrugSet() throws JsonProcessingException {
         DrugSet drugSet = panDrugsController.getAllDrugs();
-        drugSetService.saveDrugSet(drugSet);
+
+        if(!drugSetService.existByName(drugSet)){
+            drugSetService.saveDrugSet(drugSet);
+        }else{
+            List<Drug> drugs = drugSet.getDrugs();
+            drugSet = drugSetService.findByName(drugSet.getName());
+            drugSet.setDrugs(drugs);
+            drugSetService.updateDrugSet(drugSet);
+        }
+
         return new ResponseEntity<DrugSet>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
     }
 
 
-    @PostMapping("/new")
-    @ResponseBody
-    public ResponseEntity<DrugSet> createDrugSet(@RequestBody DrugSet drugSet) throws URISyntaxException {
-        return new ResponseEntity<>(drugSetService.saveDrugSet(drugSet), HttpStatus.CREATED);
-    }
-
     @PostMapping("/{id}/update")
-    public ResponseEntity<DrugUpdate> updateDrugSet(@RequestBody DrugSet drugSet) {
+    public ResponseEntity<DrugSet> updateDrugSet(@RequestBody DrugSet drugSet) {
         if (drugSetService.existById(drugSet.getId())) {
             return new ResponseEntity<>(drugSetService.updateDrugSet(drugSet), HttpStatus.ACCEPTED);
         }
         throw new IllegalArgumentException("DrugSet with id " + drugSet.getId() + "not found");
-    }
-
-    @DeleteMapping("/{id}/delete")
-    public ResponseEntity<HttpStatus> deleteDrugSet(@PathVariable("id") String id) {
-        if (drugSetService.existById(UUID.fromString(id))) {
-            drugSetService.deleteDrugSet(UUID.fromString(id));
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
-        throw new IllegalArgumentException("DrugSet with id " + id + "not found");
     }
 
 }

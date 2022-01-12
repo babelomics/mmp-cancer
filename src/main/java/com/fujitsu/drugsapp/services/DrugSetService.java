@@ -82,9 +82,21 @@ public class DrugSetService {
         return matchedDrugs;
     }
 
+    public DrugSet findByName(String name){
+
+        List<DrugSet> drugSetList = drugSetRepository.findAll();
+
+        for(DrugSet drugSet : drugSetList){
+            if(name.equals(drugSet.getName())){
+                return drugSet;
+            }
+        }
+
+        return null;
+    }
+
     public DrugSet saveDrugSet(DrugSet drugSet){
         List<Drug> newDrugs = drugSet.getDrugs();
-        boolean exists = false;
 
         DrugUpdate drugUpdate = registerUpdate(drugSet.getId());
         drugUpdateService.saveDrugUpdate(drugUpdate);
@@ -92,6 +104,25 @@ public class DrugSetService {
         drugSet.setDrugs(null);
         drugSetRepository.save(drugSet);
 
+        registerDrugsToDrugSet(drugSet, newDrugs, drugUpdate);
+
+        return drugSet;
+    }
+
+    public void deleteDrugSet(UUID uuid){
+        drugSetRepository.deleteById(uuid);
+    }
+
+    public DrugUpdate registerUpdate(UUID drugSetId){
+        DrugUpdate drugUpdate = new DrugUpdate();
+        drugUpdate.setDrugSetId(drugSetId);
+
+        return drugUpdate;
+    }
+
+    public void registerDrugsToDrugSet(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate drugUpdate){
+
+        boolean exists = false;
         int batchSize = 100;
         for(int i = 0; i<newDrugs.size(); i += batchSize) {
             List<Drug> batchDrugs = new ArrayList<>();
@@ -129,39 +160,46 @@ public class DrugSetService {
             drugNameService.saveAll(batchNames);
 
         }
-
-        return drugSet;
-    }
-
-    public void deleteDrugSet(UUID uuid){
-        drugSetRepository.deleteById(uuid);
-    }
-
-    public DrugUpdate registerUpdate(UUID drugSetId){
-        DrugUpdate drugUpdate = new DrugUpdate();
-        drugUpdate.setDrugSetId(drugSetId);
-
-        return drugUpdate;
     }
 
     public List<DrugUpdate> getDrugSetUpdates(UUID drugSetId){
         return drugUpdateService.findByDrugSetId(drugSetId);
     }
 
-    public DrugUpdate updateDrugSet(DrugSet drugSet){
+    public DrugSet updateDrugSet(DrugSet drugSet){
+
+        List<Drug> newDrugs = drugSet.getDrugs();
+        drugSet.setDrugs(null);
 
         DrugUpdate drugUpdate = new DrugUpdate();
         drugUpdate.setDrugSetId(drugSet.getId());
         List<DrugUpdate> drugUpdateList = drugUpdateService.findAll();
         drugUpdateList.get(drugUpdateList.size()-1).setNextUpdateId(drugUpdate.getId());
         drugUpdate.setPreviousUpdateId(drugUpdateList.get(drugUpdateList.size()-1).getId());
-        drugUpdateService.updateDrugUpdate(drugUpdateList.get(drugUpdateList.size()-1));
         drugUpdateService.saveDrugUpdate(drugUpdate);
+        drugUpdateService.updateDrugUpdate(drugUpdateList.get(drugUpdateList.size()-1));
+        drugSet.setUpdatedAt(drugUpdate.getCreatedAt());
 
-        return drugUpdate;
+        drugSetRepository.save(drugSet);
+
+        registerDrugsToDrugSet(drugSet, newDrugs, drugUpdate);
+
+        return drugSet;
     }
 
     public boolean existById(UUID uuid){
         return drugSetRepository.existsById(uuid);
     }
+
+    public boolean existByName(DrugSet drugSet){
+        List<DrugSet> findDrugSet = drugSetRepository.findAll();
+
+        for (DrugSet set : findDrugSet) {
+            if (drugSet.getName().toLowerCase().equals(set.getName().toLowerCase()))
+                return true;
+        }
+
+        return false;
+    }
+
 }
