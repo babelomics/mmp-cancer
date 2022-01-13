@@ -1,9 +1,13 @@
 package com.fujitsu.drugsapp.services;
 
+import com.fujitsu.drugsapp.dto.DrugDTO;
+import com.fujitsu.drugsapp.dto.DrugSetDTO;
 import com.fujitsu.drugsapp.entities.*;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import lombok.AllArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -21,16 +25,19 @@ public class DrugSetService {
     private final DrugUpdateService drugUpdateService;
     private final DrugNameService drugNameService;
     private final DrugSourceService drugSourceService;
+    private final ModelMapper modelMapper = new ModelMapper();
 
-    public List<DrugSet> findAll(String searchText){
+    public List<DrugSetDTO> findAll(String searchText){
+
+        List<DrugSetDTO> drugSets = modelMapper.map(drugSetRepository.findAll(), new TypeToken<List<DrugSetDTO>>() {}.getType());
 
         if(searchText==null) {
-            return drugSetRepository.findAll();
+            return drugSets;
         }else{
-            List<DrugSet> drugSets = drugSetRepository.findAll();
-            List<DrugSet> matchedDrugSets = new ArrayList<>();
 
-            for (DrugSet drugSet : drugSets) {
+            List<DrugSetDTO> matchedDrugSets = new ArrayList<>();
+
+            for (DrugSetDTO drugSet : drugSets) {
                 if (drugSet.getName().toLowerCase().contains(searchText.toLowerCase())
                         || drugSet.getDescription().toLowerCase().contains(searchText.toLowerCase()))
                     matchedDrugSets.add(drugSet);
@@ -39,11 +46,13 @@ public class DrugSetService {
         }
     }
 
-    public DrugSet findById(UUID uuid) {
-        return drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
+    public DrugSetDTO findById(UUID uuid) {
+        DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
+        DrugSetDTO drugSetDTO = modelMapper.map(drugSet,DrugSetDTO.class);
+        return drugSetDTO;
     }
 
-    public List<Drug> findDrugsById(UUID uuid, String searchText, Instant date) {
+    public List<DrugDTO> findDrugsById(UUID uuid, String searchText, Instant date) {
         DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
         List<Drug> matchedDrugs = new ArrayList<>();
         List<Drug> drugs = drugRepository.findAll();
@@ -79,7 +88,7 @@ public class DrugSetService {
             }
         }
 
-        return matchedDrugs;
+        return modelMapper.map(matchedDrugs, new TypeToken<List<DrugDTO>>() {}.getType());
     }
 
     public DrugSet findByName(String name){

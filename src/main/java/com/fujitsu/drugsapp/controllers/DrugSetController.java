@@ -1,6 +1,8 @@
 package com.fujitsu.drugsapp.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fujitsu.drugsapp.dto.DrugDTO;
+import com.fujitsu.drugsapp.dto.DrugSetDTO;
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugSet;
 import com.fujitsu.drugsapp.entities.DrugUpdate;
@@ -31,13 +33,13 @@ public class DrugSetController {
 
     @GetMapping()
     @CrossOrigin
-    public ResponseEntity<List<DrugSet>> getAllDrugSets(@RequestParam(required = false) String searchText) throws JsonProcessingException {
+    public ResponseEntity<List<DrugSetDTO>> getAllDrugSets(@RequestParam(required = false) String searchText) throws JsonProcessingException {
         return new ResponseEntity<>(drugSetService.findAll(searchText), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
     @CrossOrigin
-    public ResponseEntity<DrugSet> getDrugSetById(@PathVariable("id") String id) {
+    public ResponseEntity<DrugSetDTO> getDrugSetById(@PathVariable("id") String id) {
         return new ResponseEntity<>(drugSetService.findById(UUID.fromString(id)), HttpStatus.OK);
     }
 
@@ -48,14 +50,14 @@ public class DrugSetController {
 
     @GetMapping("/{id}/drugs")
     @CrossOrigin
-    public ResponseEntity<List<Drug>> getDrugsInDrugSet(@PathVariable("id") String id, @RequestParam(required = false) String searchText,
+    public ResponseEntity<List<DrugDTO>> getDrugsInDrugSet(@PathVariable("id") String id, @RequestParam(required = false) String searchText,
                                                         @RequestParam(name = "date", required = false) Instant date) {
 
-        return new ResponseEntity<List<Drug>>(drugSetService.findDrugsById(UUID.fromString(id), searchText, date), HttpStatus.OK);
+        return new ResponseEntity<List<DrugDTO>>(drugSetService.findDrugsById(UUID.fromString(id), searchText, date), HttpStatus.OK);
     }
 
     @GetMapping("/getPandrugSet")
-    public ResponseEntity<DrugSet> getPandrugSet() throws JsonProcessingException {
+    public ResponseEntity<DrugSetDTO> getPandrugSet() throws JsonProcessingException {
         DrugSet drugSet = panDrugsController.getAllDrugs();
 
         if(!drugSetService.existByName(drugSet)){
@@ -67,7 +69,7 @@ public class DrugSetController {
             drugSetService.updateDrugSet(drugSet);
         }
 
-        return new ResponseEntity<DrugSet>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
+        return new ResponseEntity<DrugSetDTO>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
     }
 
 

@@ -1,5 +1,6 @@
 package com.fujitsu.drugsapp.controllers;
 
+import com.fujitsu.drugsapp.dto.DrugDTO;
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.services.DrugService;
 import com.fujitsu.drugsapp.services.DrugSetService;
@@ -23,9 +24,9 @@ public class DrugController {
     private final DrugSetService drugSetService;
 
     @GetMapping()
-    public ResponseEntity<List<Drug>> getAllDrugs(@RequestParam(required = false) String drugSetId,
-                                                  @RequestParam(required = false) String searchText,
-                                                  @RequestParam(name = "date", required = false) Instant date){
+    public ResponseEntity<List<DrugDTO>> getAllDrugs(@RequestParam(required = false) String drugSetId,
+                                                     @RequestParam(required = false) String searchText,
+                                                     @RequestParam(name = "date", required = false) Instant date){
 
         if(drugSetId==null){
             return new ResponseEntity<>(drugService.findAll(), HttpStatus.OK);
@@ -35,7 +36,7 @@ public class DrugController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Drug> getDrugSetById(@PathVariable("id") String id) {
+    public ResponseEntity<DrugDTO> getDrugSetById(@PathVariable("id") String id) {
         return new ResponseEntity<>(drugService.findById(UUID.fromString(id)), HttpStatus.OK);
     }
 
