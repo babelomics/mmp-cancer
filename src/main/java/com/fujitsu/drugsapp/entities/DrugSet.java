@@ -31,7 +31,7 @@ public class DrugSet {
     @Column
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "drugSet", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "drugSet", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Drug> drugs;
 
 }

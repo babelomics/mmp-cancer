@@ -1,5 +1,6 @@
 package com.fujitsu.drugsapp.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,6 +40,7 @@ public class Drug {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "drugset_id", nullable = false)
+    @JsonIgnore
     private DrugSet drugSet;
 
     @OneToMany(mappedBy = "drug", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

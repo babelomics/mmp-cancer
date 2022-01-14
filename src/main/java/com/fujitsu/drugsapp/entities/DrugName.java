@@ -1,5 +1,7 @@
 package com.fujitsu.drugsapp.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,10 +23,12 @@ public class DrugName {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "drug_id", nullable = false)
+    @JsonIgnore
     private Drug drug;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "drugSource_id", nullable = false)
+    @JsonIgnoreProperties("drugNames")
     private DrugSource drugSource;
 
 }

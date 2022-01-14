@@ -1,14 +1,12 @@
 package com.fujitsu.drugsapp.services;
 
-import com.fujitsu.drugsapp.dto.DrugDTO;
-import com.fujitsu.drugsapp.dto.DrugSetDTO;
 import com.fujitsu.drugsapp.entities.*;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import lombok.AllArgsConstructor;
-import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeToken;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -25,19 +23,18 @@ public class DrugSetService {
     private final DrugUpdateService drugUpdateService;
     private final DrugNameService drugNameService;
     private final DrugSourceService drugSourceService;
-    private final ModelMapper modelMapper = new ModelMapper();
 
-    public List<DrugSetDTO> findAll(String searchText){
+    public List<DrugSet> findAll(String searchText){
 
-        List<DrugSetDTO> drugSets = modelMapper.map(drugSetRepository.findAll(), new TypeToken<List<DrugSetDTO>>() {}.getType());
+        List<DrugSet> drugSetList = drugSetRepository.findAll();
 
         if(searchText==null) {
-            return drugSets;
+            return drugSetList;
         }else{
 
-            List<DrugSetDTO> matchedDrugSets = new ArrayList<>();
+            List<DrugSet> matchedDrugSets = new ArrayList<>();
 
-            for (DrugSetDTO drugSet : drugSets) {
+            for (DrugSet drugSet : drugSetList) {
                 if (drugSet.getName().toLowerCase().contains(searchText.toLowerCase())
                         || drugSet.getDescription().toLowerCase().contains(searchText.toLowerCase()))
                     matchedDrugSets.add(drugSet);
@@ -46,13 +43,11 @@ public class DrugSetService {
         }
     }
 
-    public DrugSetDTO findById(UUID uuid) {
-        DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
-        DrugSetDTO drugSetDTO = modelMapper.map(drugSet,DrugSetDTO.class);
-        return drugSetDTO;
+    public DrugSet findById(UUID uuid) {
+        return drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
     }
 
-    public List<DrugDTO> findDrugsById(UUID uuid, String searchText, Instant date) {
+    public List<Drug> findDrugsById(UUID uuid, String searchText, Instant date) {
         DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
         List<Drug> matchedDrugs = new ArrayList<>();
         List<Drug> drugs = drugRepository.findAll();
@@ -88,7 +83,7 @@ public class DrugSetService {
             }
         }
 
-        return modelMapper.map(matchedDrugs, new TypeToken<List<DrugDTO>>() {}.getType());
+        return matchedDrugs;
     }
 
     public DrugSet findByName(String name){
@@ -104,6 +99,7 @@ public class DrugSetService {
         return null;
     }
 
+    @Transactional
     public DrugSet saveDrugSet(DrugSet drugSet){
         List<Drug> newDrugs = drugSet.getDrugs();
 
@@ -132,25 +128,18 @@ public class DrugSetService {
     public void registerDrugsToDrugSet(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate drugUpdate){
 
         boolean exists = false;
-        int batchSize = 100;
-        for(int i = 0; i<newDrugs.size(); i += batchSize) {
-            List<Drug> batchDrugs = new ArrayList<>();
-            List<DrugName> batchNames = new ArrayList<>();
+        int batchSize = 1000;
+        List<DrugName> drugNames = new ArrayList<>();
 
-            for(int j = i; j<i+ batchSize && j<newDrugs.size() ; ++j) {
+        for(int i = 0; i<newDrugs.size(); ++i) {
 
-                exists = drugService.existByStandardName(newDrugs.get(j));
+                exists = drugService.existByStandardName(newDrugs.get(i));
 
                 if (!exists) {
 
-                    List<DrugName> drugNamesList = newDrugs.get(j).getDrugNames();
-                    newDrugs.get(j).setDrugNames(null);
-                    batchDrugs.add(newDrugs.get(j));
-
-
-                    for (DrugName drugName : drugNamesList) {
-                        drugName.setDrug(newDrugs.get(j));
-                        batchNames.add(drugName);
+                    for (DrugName drugName : newDrugs.get(i).getDrugNames()) {
+                        drugName.setDrug(newDrugs.get(i));
+                        drugNames.add(drugName);
 
                         if(!drugSourceService.existByShortName(drugName.getDrugSource())) {
                             drugSourceService.saveDrugSource(drugName.getDrugSource());
@@ -158,23 +147,23 @@ public class DrugSetService {
                             DrugSource drugSource = drugSourceService.findByShortName(drugName.getDrugSource().getShortName());
                             drugName.setDrugSource(drugSource);
                         }
-                    }
 
-                    newDrugs.get(j).setStartUpdate(drugUpdate.getId());
-                    newDrugs.get(j).setDrugSet(drugSet);
+                    newDrugs.get(i).setDrugNames(null);
+                    newDrugs.get(i).setStartUpdate(drugUpdate.getId());
+                    newDrugs.get(i).setDrugSet(drugSet);
                 }
             }
-
-            drugService.saveAll(batchDrugs);
-            drugNameService.saveAll(batchNames);
-
         }
+
+        drugService.saveAll(newDrugs);
+        drugNameService.saveAll(drugNames);
     }
 
     public List<DrugUpdate> getDrugSetUpdates(UUID drugSetId){
         return drugUpdateService.findByDrugSetId(drugSetId);
     }
 
+    @Transactional
     public DrugSet updateDrugSet(DrugSet drugSet){
 
         List<Drug> newDrugs = drugSet.getDrugs();

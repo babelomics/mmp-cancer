@@ -1,6 +1,5 @@
 package com.fujitsu.drugsapp.controllers;
 
-import com.fujitsu.drugsapp.dto.DrugDTO;
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.services.DrugService;
 import com.fujitsu.drugsapp.services.DrugSetService;
@@ -10,8 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,7 +21,7 @@ public class DrugController {
     private final DrugSetService drugSetService;
 
     @GetMapping()
-    public ResponseEntity<List<DrugDTO>> getAllDrugs(@RequestParam(required = false) String drugSetId,
+    public ResponseEntity<List<Drug>> getAllDrugs(@RequestParam(required = false) String drugSetId,
                                                      @RequestParam(required = false) String searchText,
                                                      @RequestParam(name = "date", required = false) Instant date){
 
@@ -36,7 +33,7 @@ public class DrugController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DrugDTO> getDrugSetById(@PathVariable("id") String id) {
+    public ResponseEntity<Drug> getDrugSetById(@PathVariable("id") String id) {
         return new ResponseEntity<>(drugService.findById(UUID.fromString(id)), HttpStatus.OK);
     }
 

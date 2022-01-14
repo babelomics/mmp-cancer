@@ -1,6 +1,4 @@
 spring:
-    main:
-        allow-circular-references: true
     application:
         name: DrugsApp
     data:
@@ -8,7 +6,7 @@ spring:
     datasource:
         initialization-mode: always
         driver-class-name: org.postgresql.Driver
-        url: jdbc:postgresql://localhost:5432/drugs_db
+        url: jdbc:postgresql://localhost:5432/drugs_db?reWriteBatchedInserts=true
         username:
         password:
         continueOnError: true
@@ -23,8 +21,11 @@ spring:
                 jdbc.lob.non_contextual_creation: true
                 show_sql: false
                 format_sql: false
+                use_sql_comments: false
                 generate_statistics: true
                 jdbc:
-                    batch_size: 100
+                    batch_size: 1000
+                    batch_versioned_data: true
                 order_inserts: true
+                order_updates: true
                 dialect: org.hibernate.dialect.PostgreSQLDialect
