@@ -46,4 +46,14 @@ public class DrugService {
 
         return false;
     }
+
+    public boolean existByStandardName(List<Drug> findDrug, Drug drug){
+
+        for(int i=0; i<findDrug.size(); ++i){
+            if(drug.getStandardName().toLowerCase().equals(findDrug.get(i).getStandardName().toLowerCase()))
+                return true;
+        }
+
+        return false;
+    }
 }

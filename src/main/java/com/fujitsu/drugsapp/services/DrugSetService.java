@@ -3,11 +3,16 @@ package com.fujitsu.drugsapp.services;
 import com.fujitsu.drugsapp.entities.*;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.fujitsu.drugsapp.repositories.DrugSetRepository;
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.AllArgsConstructor;
-import org.postgresql.ds.PGSimpleDataSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.Table;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -21,12 +26,16 @@ public class DrugSetService {
     private final DrugRepository drugRepository;
     private final DrugService drugService;
     private final DrugUpdateService drugUpdateService;
-    private final DrugNameService drugNameService;
     private final DrugSourceService drugSourceService;
+
+    @Autowired
+    HikariDataSource hikariDataSource;
+
+    private final int batchSize = 100;
 
     public List<DrugSet> findAll(String searchText){
 
-        List<DrugSet> drugSetList = drugSetRepository.findAll();
+        List<DrugSet> drugSetList = drugSetRepository.getDrugSetWithDrugs();
 
         if(searchText==null) {
             return drugSetList;
@@ -99,7 +108,6 @@ public class DrugSetService {
         return null;
     }
 
-    @Transactional
     public DrugSet saveDrugSet(DrugSet drugSet){
         List<Drug> newDrugs = drugSet.getDrugs();
 
@@ -128,42 +136,165 @@ public class DrugSetService {
     public void registerDrugsToDrugSet(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate drugUpdate){
 
         boolean exists = false;
-        int batchSize = 1000;
-        List<DrugName> drugNames = new ArrayList<>();
+        List<DrugSource> drugSourceList = drugSourceService.findAll();
+        List<DrugSource> drugSourcesToSave = drugSourceService.findAll();
+
+        List<Drug> drugList = drugService.findAll();
+        List<DrugName> drugNameList = new ArrayList<>();
 
         for(int i = 0; i<newDrugs.size(); ++i) {
 
-                exists = drugService.existByStandardName(newDrugs.get(i));
+                exists = drugService.existByStandardName(drugList, newDrugs.get(i));
 
                 if (!exists) {
 
                     for (DrugName drugName : newDrugs.get(i).getDrugNames()) {
                         drugName.setDrug(newDrugs.get(i));
-                        drugNames.add(drugName);
 
-                        if(!drugSourceService.existByShortName(drugName.getDrugSource())) {
-                            drugSourceService.saveDrugSource(drugName.getDrugSource());
+                        if(!drugSourceService.existByShortName(drugSourceList,drugName.getDrugSource())) {
+                            drugSourcesToSave.add(drugName.getDrugSource());
+                            drugSourceList.add(drugName.getDrugSource());
                         }else{
-                            DrugSource drugSource = drugSourceService.findByShortName(drugName.getDrugSource().getShortName());
+                            DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
                             drugName.setDrugSource(drugSource);
                         }
 
-                    newDrugs.get(i).setDrugNames(null);
+                        drugNameList.add(drugName);
+                    }
                     newDrugs.get(i).setStartUpdate(drugUpdate.getId());
                     newDrugs.get(i).setDrugSet(drugSet);
-                }
+
+                    drugList.add(newDrugs.get(i));
             }
         }
 
-        drugService.saveAll(newDrugs);
-        drugNameService.saveAll(drugNames);
+        saveAllDrugsByJdbcBatch(newDrugs, drugSet);
+        saveAllDrugSourcesByJdbcBatch(drugSourcesToSave);
+        saveAllDrugNamesByJdbcBatch(drugNameList);
     }
+
+    public void saveAllDrugsByJdbcBatch(List<Drug> drugData, DrugSet drugSet){
+        String sql = String.format(
+                "INSERT INTO drug (id, common_name, end_update, next_version, previous_version, standard_name, start_update, drugset_id) " +
+                        "VALUES (?::UUID, ?, ?::UUID, ?::UUID, ?::UUID, ?, ?::UUID, ?::UUID)",
+                Drug.class.getAnnotation(Table.class).name()
+        );
+        try (Connection connection = hikariDataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)
+        ){
+            int counter = 0;
+            for (Drug drug : drugData) {
+                statement.clearParameters();
+                statement.setString(1, drug.getId().toString());
+                statement.setString(2, drug.getCommonName());
+
+                if(drug.getEndUpdate() != null) {
+                    statement.setString(3, drug.getEndUpdate().toString());
+                }else {
+                    statement.setNull(3, Types.NULL);
+                }
+
+                if(drug.getNextVersion() != null){
+                    statement.setString(4, drug.getNextVersion().toString());
+                }else {
+                    statement.setNull(4, Types.NULL);
+                }
+
+                if(drug.getNextVersion() != null){
+                    statement.setString(5, drug.getPreviousVersion().toString());
+                }else {
+                    statement.setNull(5, Types.NULL);
+                }
+
+                statement.setString(6, drug.getStandardName());
+
+                if(drug.getStartUpdate() != null) {
+                    statement.setString(7, drug.getStartUpdate().toString());
+                }else {
+                    statement.setNull(7, Types.NULL);
+                }
+
+                statement.setString(8, drugSet.getId().toString());
+                statement.addBatch();
+                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugData.size()) {
+                    statement.executeBatch();
+                    statement.clearBatch();
+                }
+                counter++;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void saveAllDrugNamesByJdbcBatch(List<DrugName> drugNameData){
+        String sql = String.format(
+                "INSERT INTO drug_name (id, name, drug_id, drug_source_id) " +
+                        "VALUES (?::UUID, ?, ?::UUID, ?::UUID)",
+                DrugName.class.getAnnotation(Table.class).name()
+        );
+        try (Connection connection = hikariDataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)
+        ){
+            int counter = 0;
+            for (DrugName drugName : drugNameData) {
+                statement.clearParameters();
+                statement.setString(1, drugName.getId().toString());
+                statement.setString(2, drugName.getName());
+                statement.setString(3, drugName.getDrug().getId().toString());
+                statement.setString(4, drugName.getDrugSource().getId().toString());
+
+
+                statement.addBatch();
+                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugNameData.size()) {
+                    statement.executeBatch();
+                    statement.clearBatch();
+                }
+                counter++;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void saveAllDrugSourcesByJdbcBatch(List<DrugSource> drugSourceData){
+        String sql = String.format(
+            "INSERT INTO drug_source (id, short_name, url) " +
+                        "VALUES (?::UUID, ?, ?)",
+                DrugSource.class.getAnnotation(Table.class).name()
+        );
+        try (Connection connection = hikariDataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)
+        ){
+            int counter = 0;
+            for (DrugSource drugSource : drugSourceData) {
+                statement.clearParameters();
+                statement.setString(1, drugSource.getId().toString());
+                statement.setString(2, drugSource.getShortName());
+
+                if(drugSource.getUrl() != null) {
+                    statement.setURL(3, drugSource.getUrl());
+                }else{
+                    statement.setNull(3, Types.NULL);
+                }
+                statement.addBatch();
+
+                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugSourceData.size()) {
+                    statement.executeBatch();
+                    statement.clearBatch();
+                }
+                counter++;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public List<DrugUpdate> getDrugSetUpdates(UUID drugSetId){
         return drugUpdateService.findByDrugSetId(drugSetId);
     }
 
-    @Transactional
     public DrugSet updateDrugSet(DrugSet drugSet){
 
         List<Drug> newDrugs = drugSet.getDrugs();

@@ -4,21 +4,17 @@ import com.fujitsu.drugsapp.entities.DrugSet;
 import com.fujitsu.drugsapp.entities.Drug;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface DrugSetRepository extends JpaRepository<DrugSet, UUID> {
 
-    @EntityGraph(
-            type = EntityGraph.EntityGraphType.FETCH,
-            attributePaths = {
-                    "id",
-                    "name",
-                    "description"
-            }
-    )
     List<DrugSet> findAll();
 
     List<Drug> findDrugsById(UUID uuid);
+
+    @Query("SELECT d FROM DrugSet d LEFT JOIN FETCH d.drugs")
+    List<DrugSet> getDrugSetWithDrugs();
 }

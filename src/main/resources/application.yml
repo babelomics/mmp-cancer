@@ -24,7 +24,9 @@ spring:
                 use_sql_comments: false
                 generate_statistics: true
                 jdbc:
-                    batch_size: 1000
+                    lob.non_contextual_creation: true
+                    fetch_size: 100
+                    batch_size: 100
                     batch_versioned_data: true
                 order_inserts: true
                 order_updates: true

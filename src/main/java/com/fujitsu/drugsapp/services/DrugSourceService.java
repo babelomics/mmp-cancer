@@ -36,6 +36,17 @@ public class DrugSourceService {
         return null;
     }
 
+    public DrugSource findByShortName(List<DrugSource> drugSourceList, String shortName){
+
+        for(DrugSource drugSource : drugSourceList){
+            if(shortName.equals(drugSource.getShortName())){
+                return drugSource;
+            }
+        }
+
+        return null;
+    }
+
     public DrugSource saveDrugSource(DrugSource drugSource){ return drugSourceRepository.save(drugSource); }
 
     public List<DrugSource> saveAll(List<DrugSource> drugSourceList){ return drugSourceRepository.saveAll(drugSourceList); }
@@ -52,6 +63,16 @@ public class DrugSourceService {
 
     public boolean existByShortName(DrugSource drugSource){
         List<DrugSource> findDrugSource = drugSourceRepository.findAll();
+
+        for(int i=0; i<findDrugSource.size(); ++i){
+            if(drugSource.getShortName().toLowerCase().equals(findDrugSource.get(i).getShortName().toLowerCase()))
+                return true;
+        }
+
+        return false;
+    }
+
+    public boolean existByShortName(List<DrugSource> findDrugSource, DrugSource drugSource){
 
         for(int i=0; i<findDrugSource.size(); ++i){
             if(drugSource.getShortName().toLowerCase().equals(findDrugSource.get(i).getShortName().toLowerCase()))
