@@ -15,6 +15,4 @@ public interface DrugSetRepository extends JpaRepository<DrugSet, UUID> {
 
     List<Drug> findDrugsById(UUID uuid);
 
-    @Query("SELECT d FROM DrugSet d LEFT JOIN FETCH d.drugs")
-    List<DrugSet> getDrugSetWithDrugs();
 }

@@ -41,7 +41,7 @@ public class DrugSetService {
 
     public List<DrugSet> findAll(String searchText){
 
-        List<DrugSet> drugSetList = drugSetRepository.getDrugSetWithDrugs();
+        List<DrugSet> drugSetList = drugSetRepository.findAll();
 
         if(searchText==null) {
             return drugSetList;
