@@ -144,33 +144,71 @@ public class DrugSetService {
         List<Drug> drugList = drugService.findAll();
         List<DrugName> drugNameList = new ArrayList<>();
 
-        for(int i = 0; i<newDrugs.size(); ++i) {
+        for (Drug newDrug : newDrugs) {
 
-                exists = drugService.existByStandardName(drugList, newDrugs.get(i));
+            exists = drugService.existByStandardName(drugList, newDrug);
 
-                if (!exists) {
+            if (!exists) {
 
-                    for (DrugName drugName : newDrugs.get(i).getDrugNames()) {
-                        drugName.setDrug(newDrugs.get(i));
+                for (DrugName drugName : newDrug.getDrugNames()) {
+                    drugName.setDrug(newDrug);
 
-                        if(!drugSourceService.existByShortName(drugSourceList,drugName.getDrugSource())) {
-                            drugSourcesToSave.add(drugName.getDrugSource());
-                            drugSourceList.add(drugName.getDrugSource());
-                        }else{
-                            DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
-                            drugName.setDrugSource(drugSource);
-                        }
-
-                        drugNameList.add(drugName);
+                    if (!drugSourceService.existByShortName(drugSourceList, drugName.getDrugSource())) {
+                        drugSourcesToSave.add(drugName.getDrugSource());
+                        drugSourceList.add(drugName.getDrugSource());
+                    } else {
+                        DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
+                        drugName.setDrugSource(drugSource);
                     }
-                    newDrugs.get(i).setStartUpdate(drugUpdate.getId());
-                    newDrugs.get(i).setDrugSet(drugSet);
 
-                    drugList.add(newDrugs.get(i));
+                    drugNameList.add(drugName);
+                }
+                newDrug.setStartUpdate(drugUpdate.getId());
+                newDrug.setDrugSet(drugSet);
+
+                drugList.add(newDrug);
             }
         }
 
         transactionalDrugSetSave(drugUpdate, drugSet, newDrugs, drugSourcesToSave, drugNameList);
+    }
+
+    public void registerDrugSet(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate oldDrugUpdate, DrugUpdate newDrugUpdate){
+
+        boolean exists = false;
+        List<DrugSource> drugSourceList = drugSourceService.findAll();
+        List<DrugSource> drugSourcesToSave = drugSourceService.findAll();
+
+        List<Drug> drugList = drugService.findAll();
+        List<DrugName> drugNameList = new ArrayList<>();
+
+        for (Drug newDrug : newDrugs) {
+
+            exists = drugService.existByStandardName(drugList, newDrug);
+
+            if (!exists) {
+
+                for (DrugName drugName : newDrug.getDrugNames()) {
+                    drugName.setDrug(newDrug);
+
+                    if (!drugSourceService.existByShortName(drugSourceList, drugName.getDrugSource())) {
+                        drugSourcesToSave.add(drugName.getDrugSource());
+                        drugSourceList.add(drugName.getDrugSource());
+                    } else {
+                        DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
+                        drugName.setDrugSource(drugSource);
+                    }
+
+                    drugNameList.add(drugName);
+                }
+                newDrug.setStartUpdate(oldDrugUpdate.getId());
+                newDrug.setDrugSet(drugSet);
+
+                drugList.add(newDrug);
+            }
+        }
+
+        transactionalDrugSetUpdate(oldDrugUpdate, newDrugUpdate, drugSet, newDrugs, drugSourcesToSave, drugNameList);
     }
 
     public void transactionalDrugSetSave(DrugUpdate drugUpdate, DrugSet drugSet, List<Drug> drugData, List<DrugSource> drugSourceList, List<DrugName> drugNameList){
@@ -253,6 +291,96 @@ public class DrugSetService {
         }
     }
 
+    public void transactionalDrugSetUpdate(DrugUpdate oldDrugUpdate, DrugUpdate newDrugUpdate, DrugSet drugSet, List<Drug> drugData, List<DrugSource> drugSourceList, List<DrugName> drugNameList){
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+
+        try{
+
+            connection = hikariDataSource.getConnection();
+            connection.setAutoCommit(false);
+
+            String sqlNewDrugUpdate = String.format(
+                    "INSERT INTO drug_update (id, created_at, description, drug_set_id, next_update_id, previous_update_id, user_id) " +
+                            "VALUES (?::UUID, ?, ?, ?::UUID,?::UUID, ?::UUID, ?::UUID)",
+                    DrugUpdate.class.getAnnotation(Table.class).name()
+            );
+
+            statement = connection.prepareStatement(sqlNewDrugUpdate);
+
+            saveDrugUpdateByJdbc(newDrugUpdate, statement);
+
+            String sqlOldDrugUpdate = String.format(
+                    "UPDATE drug_update SET created_at=?, description=?, drug_set_id=?::UUID, next_update_id=?::UUID, previous_update_id=?::UUID, user_id=?::UUID " +
+                            "WHERE id=?::UUID",
+                    DrugUpdate.class.getAnnotation(Table.class).name()
+            );
+
+            statement = connection.prepareStatement(sqlOldDrugUpdate);
+
+            updateDrugUpdateByJdbc(oldDrugUpdate, statement);
+
+            String sqlDrugSet = String.format(
+                    "UPDATE drug_set SET created_at=?, description=?, name=?, updated_at=? " +
+                            "WHERE id=?::UUID",
+                    DrugSet.class.getAnnotation(Table.class).name()
+            );
+
+            statement = connection.prepareStatement(sqlDrugSet);
+
+            updateDrugSetByJdbc(drugSet, statement);
+
+            String sqlDrugs = String.format(
+                    "UPDATE drug SET common_name=?, end_update=?, next_version=?::UUID, previous_version=?::UUID, standard_name=?, start_update=?::UUID, drugset_id=?::UUID " +
+                            "WHERE id=?::UUID",
+                    Drug.class.getAnnotation(Table.class).name()
+            );
+
+            statement = connection.prepareStatement(sqlDrugs);
+
+            updateDrugsByJdbc(drugSet, drugData, statement);
+
+            String sqlDrugSources = String.format(
+                    "UPDATE drug_source SET short_name=?, url=? " +
+                            "WHERE id=?::UUID",
+                    DrugSource.class.getAnnotation(Table.class).name()
+            );
+
+            statement = connection.prepareStatement(sqlDrugSources);
+
+            updateDrugSourcesByJdbc(drugSourceList, statement);
+
+            String sqlDrugNames = String.format(
+                    "UPDATE drug_name SET name=?, drug_id=?::UUID, drug_source_id=?::UUID " +
+                            "WHERE id=?::UUID",
+                    DrugName.class.getAnnotation(Table.class).name()
+            );
+
+            statement = connection.prepareStatement(sqlDrugNames);
+            updateDrugNamesByJdbc(drugNameList, statement);
+
+            connection.commit();
+
+        } catch(SQLException sqlex){
+            try {
+                connection.rollback();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }finally {
+            try {
+                if(null != connection) {
+                    statement.close();
+                    connection.close();
+                }
+            }
+            catch (SQLException sqlex) {
+                sqlex.printStackTrace();
+            }
+        }
+    }
+
     public void saveDrugUpdateByJdbc(DrugUpdate drugUpdateData, PreparedStatement statement){
 
         try {
@@ -292,6 +420,47 @@ public class DrugSetService {
         }
     }
 
+    public void updateDrugUpdateByJdbc(DrugUpdate drugUpdateData, PreparedStatement statement){
+
+        try {
+            statement.clearParameters();
+            statement.setTimestamp(1, Timestamp.valueOf(drugUpdateData.getCreatedAt()));
+
+            if(drugUpdateData.getDescription() == null){
+                statement.setString(2, drugUpdateData.getDescription());
+            }else {
+                statement.setNull(2, Types.NULL);
+            }
+
+            statement.setString(3, drugUpdateData.getDrugSetId().toString());
+
+            if(drugUpdateData.getNextUpdateId() != null){
+                statement.setString(4, drugUpdateData.getNextUpdateId().toString());
+            }else {
+                statement.setNull(4, Types.NULL);
+            }
+
+            if(drugUpdateData.getPreviousUpdateId() != null){
+                statement.setString(5, drugUpdateData.getPreviousUpdateId().toString());
+            }else {
+                statement.setNull(5, Types.NULL);
+            }
+
+            if(drugUpdateData.getUserId() != null){
+                statement.setString(6, drugUpdateData.getUserId().toString());
+            }else {
+                statement.setNull(6, Types.NULL);
+            }
+
+            statement.setString(7, drugUpdateData.getId().toString());
+
+            statement.executeUpdate();
+
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public void saveDrugSetByJdbc(DrugSet drugSetData, PreparedStatement statement){
 
         try {
@@ -306,6 +475,28 @@ public class DrugSetService {
                     statement.setNull(5, Types.NULL);
                 }
                 statement.executeUpdate();
+
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateDrugSetByJdbc(DrugSet drugSetData, PreparedStatement statement){
+
+        try {
+            statement.clearParameters();
+            statement.setTimestamp(1, Timestamp.valueOf(drugSetData.getCreatedAt()));
+            statement.setString(2, drugSetData.getDescription());
+            statement.setString(3, drugSetData.getName());
+            if(drugSetData.getUpdatedAt() != null){
+                statement.setTimestamp(4, Timestamp.valueOf(drugSetData.getUpdatedAt()));
+            }else {
+                statement.setNull(4, Types.NULL);
+            }
+
+            statement.setString(5, drugSetData.getId().toString());
+
+            statement.executeUpdate();
 
         }catch (Exception e) {
             e.printStackTrace();
@@ -360,6 +551,55 @@ public class DrugSetService {
         }
     }
 
+    public void updateDrugsByJdbc(DrugSet drugSet, List<Drug> drugData, PreparedStatement statement){
+        int counter = 0;
+
+        try {
+            for (Drug drug : drugData) {
+                statement.clearParameters();
+                statement.setString(1, drug.getCommonName());
+
+                if (drug.getEndUpdate() != null) {
+                    statement.setString(2, drug.getEndUpdate().toString());
+                } else {
+                    statement.setNull(2, Types.NULL);
+                }
+
+                if (drug.getNextVersion() != null) {
+                    statement.setString(3, drug.getNextVersion().toString());
+                } else {
+                    statement.setNull(3, Types.NULL);
+                }
+
+                if (drug.getNextVersion() != null) {
+                    statement.setString(4, drug.getPreviousVersion().toString());
+                } else {
+                    statement.setNull(4, Types.NULL);
+                }
+
+                statement.setString(5, drug.getStandardName());
+
+                if (drug.getStartUpdate() != null) {
+                    statement.setString(6, drug.getStartUpdate().toString());
+                } else {
+                    statement.setNull(6, Types.NULL);
+                }
+
+                statement.setString(7, drugSet.getId().toString());
+                statement.setString(8, drug.getId().toString());
+
+                statement.addBatch();
+                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugData.size()) {
+                    statement.executeBatch();
+                    statement.clearBatch();
+                }
+                counter++;
+            }
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public void saveDrugNamesByJdbc(List<DrugName> drugNameData, PreparedStatement statement){
 
         int counter = 0;
@@ -373,6 +613,31 @@ public class DrugSetService {
                 statement.setString(3, drugName.getDrug().getId().toString());
                 statement.setString(4, drugName.getDrugSource().getId().toString());
 
+
+                statement.addBatch();
+                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugNameData.size()) {
+                    statement.executeBatch();
+                    statement.clearBatch();
+                }
+                counter++;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateDrugNamesByJdbc(List<DrugName> drugNameData, PreparedStatement statement){
+
+        int counter = 0;
+
+        try{
+
+            for (DrugName drugName : drugNameData) {
+                statement.clearParameters();
+                statement.setString(1, drugName.getName());
+                statement.setString(2, drugName.getDrug().getId().toString());
+                statement.setString(3, drugName.getDrugSource().getId().toString());
+                statement.setString(4, drugName.getId().toString());
 
                 statement.addBatch();
                 if ((counter + 1) % batchSize == 0 || (counter + 1) == drugNameData.size()) {
@@ -414,6 +679,34 @@ public class DrugSetService {
         }
     }
 
+    public void updateDrugSourcesByJdbc(List<DrugSource> drugSourceData, PreparedStatement statement){
+
+        int counter = 0;
+
+        try{
+            for (DrugSource drugSource : drugSourceData) {
+                statement.clearParameters();
+                statement.setString(1, drugSource.getShortName());
+
+                if(drugSource.getUrl() != null) {
+                    statement.setURL(2, drugSource.getUrl());
+                }else{
+                    statement.setNull(2, Types.NULL);
+                }
+                statement.setString(3, drugSource.getId().toString());
+
+                statement.addBatch();
+
+                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugSourceData.size()) {
+                    statement.executeBatch();
+                    statement.clearBatch();
+                }
+                counter++;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public List<DrugUpdate> getDrugSetUpdates(UUID drugSetId){
         return drugUpdateService.findByDrugSetId(drugSetId);
@@ -427,15 +720,18 @@ public class DrugSetService {
         DrugUpdate drugUpdate = new DrugUpdate();
         drugUpdate.setDrugSetId(drugSet.getId());
         List<DrugUpdate> drugUpdateList = drugUpdateService.findAll();
+
+        Comparator<DrugUpdate> comparator = Comparator.comparing(DrugUpdate::getCreatedAt);
+
+        Collections.sort(drugUpdateList, comparator);
+        drugUpdateList.forEach(System.out::println);
+
         drugUpdateList.get(drugUpdateList.size()-1).setNextUpdateId(drugUpdate.getId());
         drugUpdate.setPreviousUpdateId(drugUpdateList.get(drugUpdateList.size()-1).getId());
-        drugUpdateService.saveDrugUpdate(drugUpdate);
-        drugUpdateService.updateDrugUpdate(drugUpdateList.get(drugUpdateList.size()-1));
+
         drugSet.setUpdatedAt(drugUpdate.getCreatedAt());
 
-        drugSetRepository.save(drugSet);
-
-        registerDrugSet(drugSet, newDrugs, drugUpdate);
+        registerDrugSet(drugSet, newDrugs, drugUpdateList.get(drugUpdateList.size()-1), drugUpdate);
 
         return drugSet;
     }

@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class DrugSetController {
 
     @Autowired
     private DrugSetService drugSetService;
+    private boolean processing = false;
 
     private final DrugsAPIController panDrugsController = new DrugsAPIController();
 
@@ -55,20 +57,29 @@ public class DrugSetController {
 
     @GetMapping("/getPandrugSet")
     public ResponseEntity<DrugSet> getPandrugSet() throws JsonProcessingException {
-        DrugSet drugSet = panDrugsController.getAllDrugs();
 
-        System.out.print("Pandrug data received!");
 
-        if(!drugSetService.existByName(drugSet)){
-            drugSetService.saveDrugSet(drugSet);
-        }else{
-            List<Drug> drugs = drugSet.getDrugs();
-            drugSet = drugSetService.findByName(drugSet.getName());
-            drugSet.setDrugs(drugs);
-            drugSetService.updateDrugSet(drugSet);
+        if(!processing) {
+
+                processing = true;
+                DrugSet drugSet = panDrugsController.getAllDrugs();
+
+                System.out.print("Pandrug data received!");
+
+                if (!drugSetService.existByName(drugSet)) {
+                    drugSetService.saveDrugSet(drugSet);
+                } else {
+                    List<Drug> drugs = drugSet.getDrugs();
+                    drugSet = drugSetService.findByName(drugSet.getName());
+                    drugSet.setDrugs(drugs);
+                    drugSetService.updateDrugSet(drugSet);
+                }
+
+                processing = false;
+                return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
+        return null;
     }
 
 
