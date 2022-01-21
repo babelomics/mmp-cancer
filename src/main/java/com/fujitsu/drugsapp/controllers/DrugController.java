@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -49,9 +50,15 @@ public class DrugController {
     @Operation(summary = "Retrieve a specific Drug", description = "Retrieve a specific Drug by %id%", tags = { "drugId" })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) ,
+            @ApiResponse(responseCode = "404", description = "drug not found") })
     @GetMapping("/{id}")
     public ResponseEntity<Drug> getDrugSetById(@PathVariable("id") String id) {
-        return new ResponseEntity<>(drugService.findById(UUID.fromString(id)), HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(drugService.findById(UUID.fromString(id)), HttpStatus.OK);
+        } catch (IllegalArgumentException illegalArgumentException){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "DrugSet Not Found", illegalArgumentException);
+        }
     }
 }

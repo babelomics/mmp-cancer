@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -50,32 +51,51 @@ public class DrugSetController {
     @Operation(summary = "Filter by Id", description = "Retrieve a specific DrugSet by %id%", tags = { "drugsetId" })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))),
+            @ApiResponse(responseCode = "404", description = "drugset not found") })
     @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @CrossOrigin
     public ResponseEntity<DrugSet> getDrugSetById(@PathVariable("id") String id) {
-        return new ResponseEntity<>(drugSetService.findById(UUID.fromString(id)), HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(drugSetService.findById(UUID.fromString(id)), HttpStatus.OK);
+        }catch (IllegalArgumentException illegalArgumentException){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "DrugSet Not Found", illegalArgumentException);
+        }
     }
 
     @Operation(summary = "DrugSet updates by Id", description = "Retrieve all the updates related to a specific DrugSet by %id%", tags = { "drugsetUpdates" })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))),
+            @ApiResponse(responseCode = "404", description = "drugset not found") })
     @GetMapping("/{id}/updates")
     public ResponseEntity<List<DrugUpdate>> getDrugSetUpdates(@PathVariable("id") String id) {
-        return new ResponseEntity<>(drugSetService.getDrugSetUpdates(UUID.fromString(id)), HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(drugSetService.getDrugSetUpdates(UUID.fromString(id)), HttpStatus.OK);
+        } catch (IllegalArgumentException illegalArgumentException){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "DrugSet Not Found", illegalArgumentException);
+        }
     }
 
     @Operation(summary = "Retrieve Drugs from a DrugSet", description = "Retrieve drugs that belong to a specific DrugSet by %id%, filtering by both %searchText% and %date%", tags = { "drugsByDrugset" })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))),
+            @ApiResponse(responseCode = "404", description = "drugset not found") })
     @GetMapping("/{id}/drugs")
     @CrossOrigin
     public ResponseEntity<List<Drug>> getDrugsInDrugSet(@PathVariable("id") String id, @Parameter(description="Search Text to filter Drugs, empty by default") @RequestParam(required = false) String searchText,
                                                         @Parameter(description="Date to filter Drugs, empty by default") @RequestParam(name = "date", required = false) Instant date) {
 
-        return new ResponseEntity<>(drugSetService.findDrugsById(UUID.fromString(id), searchText, date), HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(drugSetService.findDrugsById(UUID.fromString(id), searchText, date), HttpStatus.OK);
+        } catch (IllegalArgumentException illegalArgumentException) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "DrugSet Not Found", illegalArgumentException);
+        }
     }
 
     @Operation(summary = "Insert/Update Pandrugs set", description = "Endpoint to insert and/or update the whole set of drugs coming from Pandrugs", tags = { "pandrugsSet" })
@@ -113,13 +133,16 @@ public class DrugSetController {
     @Operation(summary = "Update a specific DrugSet by Id", description = "Endpoint to update a concrete DrugSet by %id%", tags = { "updateDrugset" })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) ,
+            @ApiResponse(responseCode = "404", description = "drugset not found") })
     @PostMapping("/{id}/update")
     public ResponseEntity<DrugSet> updateDrugSet(@RequestBody DrugSet drugSet) {
-        if (drugSetService.existById(drugSet.getId())) {
-            return new ResponseEntity<>(drugSetService.updateDrugSet(drugSet), HttpStatus.ACCEPTED);
+        try {
+             return new ResponseEntity<>(drugSetService.updateDrugSet(drugSet), HttpStatus.ACCEPTED);
+        } catch (IllegalArgumentException illegalArgumentException){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "DrugSet Not Found", illegalArgumentException);
         }
-        throw new IllegalArgumentException("DrugSet with id " + drugSet.getId() + "not found");
     }
 
 }
