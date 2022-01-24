@@ -6,13 +6,8 @@ import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
+
 
 import javax.persistence.Table;
 import java.sql.*;
@@ -35,9 +30,6 @@ public class DrugSetService {
     HikariDataSource hikariDataSource;
 
     private final int batchSize = 100;
-
-    private PlatformTransactionManager transactionManager;
-
 
     public List<DrugSet> findAll(String searchText){
 
@@ -124,10 +116,6 @@ public class DrugSetService {
         return drugSet;
     }
 
-    public void deleteDrugSet(UUID uuid){
-        drugSetRepository.deleteById(uuid);
-    }
-
     public DrugUpdate registerUpdate(UUID drugSetId){
         DrugUpdate drugUpdate = new DrugUpdate();
         drugUpdate.setDrugSetId(drugSetId);
@@ -173,43 +161,64 @@ public class DrugSetService {
         transactionalDrugSetSave(drugUpdate, drugSet, newDrugs, drugSourcesToSave, drugNameList);
     }
 
-    public void registerDrugSet(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate oldDrugUpdate, DrugUpdate newDrugUpdate){
+    public void updateDrugSetContent(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate oldDrugUpdate, DrugUpdate newDrugUpdate){
 
-        boolean exists = false;
         List<DrugSource> drugSourceList = drugSourceService.findAll();
         List<DrugSource> drugSourcesToSave = drugSourceService.findAll();
 
         List<Drug> drugList = drugService.findAll();
+        List<Drug> drugsToUpdate = new ArrayList<>();
+        List<Drug> drugsToInclude = new ArrayList<>();
         List<DrugName> drugNameList = new ArrayList<>();
 
         for (Drug newDrug : newDrugs) {
 
-            exists = drugService.existByStandardName(drugList, newDrug);
+            Drug oldDrug = drugService.getByStandardName(drugList, newDrug);
+            boolean hasChanged = false;
 
-            if (!exists) {
+            if (oldDrug != null) {
 
-                for (DrugName drugName : newDrug.getDrugNames()) {
-                    drugName.setDrug(newDrug);
+                if(oldDrug.getCommonName() != newDrug.getCommonName()){
+                    hasChanged = true;
+                }
 
-                    if (!drugSourceService.existByShortName(drugSourceList, drugName.getDrugSource())) {
-                        drugSourcesToSave.add(drugName.getDrugSource());
-                        drugSourceList.add(drugName.getDrugSource());
-                    } else {
-                        DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
-                        drugName.setDrugSource(drugSource);
+                if(oldDrug.getDrugNames().size() != newDrug.getDrugNames().size()){
+                    hasChanged = true;
+                }
+
+                if(hasChanged) {
+
+                    oldDrug.setNextVersion(newDrug.getId());
+                    newDrug.setPreviousVersion(oldDrug.getId());
+
+                    newDrug.setStartUpdate(oldDrugUpdate.getId());
+                    newDrug.setDrugSet(drugSet);
+
+                    drugsToUpdate.add(oldDrug);
+                    drugsToInclude.add(newDrug);
+
+                    for (DrugName drugName : newDrug.getDrugNames()) {
+                        drugName.setDrug(newDrug);
+
+                        if (!drugSourceService.existByShortName(drugSourceList, drugName.getDrugSource())) {
+                            drugSourcesToSave.add(drugName.getDrugSource());
+                            drugSourceList.add(drugName.getDrugSource());
+                        } else {
+                            DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
+                            drugName.setDrugSource(drugSource);
+                        }
+
+                        drugNameList.add(drugName);
                     }
 
-                    drugNameList.add(drugName);
                 }
-                newDrug.setStartUpdate(oldDrugUpdate.getId());
-                newDrug.setDrugSet(drugSet);
-
-                drugList.add(newDrug);
             }
         }
 
-        transactionalDrugSetUpdate(oldDrugUpdate, newDrugUpdate, drugSet, newDrugs, drugSourcesToSave, drugNameList);
+        if(drugsToUpdate.size() > 0 || drugsToInclude.size() > 0)
+            transactionalDrugSetUpdate(oldDrugUpdate, newDrugUpdate, drugSet, drugsToInclude, drugsToUpdate, drugSourcesToSave, drugNameList);
     }
+
 
     public void transactionalDrugSetSave(DrugUpdate drugUpdate, DrugSet drugSet, List<Drug> drugData, List<DrugSource> drugSourceList, List<DrugName> drugNameList){
 
@@ -291,7 +300,7 @@ public class DrugSetService {
         }
     }
 
-    public void transactionalDrugSetUpdate(DrugUpdate oldDrugUpdate, DrugUpdate newDrugUpdate, DrugSet drugSet, List<Drug> drugData, List<DrugSource> drugSourceList, List<DrugName> drugNameList){
+    public void transactionalDrugSetUpdate(DrugUpdate oldDrugUpdate, DrugUpdate newDrugUpdate, DrugSet drugSet, List<Drug> drugsToInclude, List<Drug> drugsToUpdate, List<DrugSource> drugSourceList, List<DrugName> drugNameList){
 
         Connection connection = null;
         PreparedStatement statement = null;
@@ -331,15 +340,31 @@ public class DrugSetService {
 
             updateDrugSetByJdbc(drugSet, statement);
 
-            String sqlDrugs = String.format(
-                    "UPDATE drug SET common_name=?, end_update=?, next_version=?::UUID, previous_version=?::UUID, standard_name=?, start_update=?::UUID, drugset_id=?::UUID " +
-                            "WHERE id=?::UUID",
-                    Drug.class.getAnnotation(Table.class).name()
-            );
+            if(drugsToInclude.size() > 0) {
 
-            statement = connection.prepareStatement(sqlDrugs);
+                String sqlDrugsToInsert = String.format(
+                        "INSERT INTO drug (id, common_name, end_update, next_version, previous_version, standard_name, start_update, drugset_id) " +
+                                "VALUES (?::UUID, ?, ?::UUID, ?::UUID, ?::UUID, ?, ?::UUID, ?::UUID)",
+                        Drug.class.getAnnotation(Table.class).name()
+                );
+                statement = connection.prepareStatement(sqlDrugsToInsert);
 
-            updateDrugsByJdbc(drugSet, drugData, statement);
+
+                saveDrugsByJdbc(drugsToInclude, statement);
+            }
+
+            if(drugsToUpdate.size() > 0) {
+
+                String sqlDrugsToUpdate = String.format(
+                        "UPDATE drug SET common_name=?, end_update=?, next_version=?::UUID, previous_version=?::UUID, standard_name=?, start_update=?::UUID, drugset_id=?::UUID " +
+                                "WHERE id=?::UUID",
+                        Drug.class.getAnnotation(Table.class).name()
+                );
+
+                statement = connection.prepareStatement(sqlDrugsToUpdate);
+
+                updateDrugsByJdbc(drugSet, drugsToUpdate, statement);
+            }
 
             String sqlDrugSources = String.format(
                     "UPDATE drug_source SET short_name=?, url=? " +
@@ -731,13 +756,9 @@ public class DrugSetService {
 
         drugSet.setUpdatedAt(drugUpdate.getCreatedAt());
 
-        registerDrugSet(drugSet, newDrugs, drugUpdateList.get(drugUpdateList.size()-1), drugUpdate);
+        updateDrugSetContent(drugSet, newDrugs, drugUpdateList.get(drugUpdateList.size()-1), drugUpdate);
 
         return drugSet;
-    }
-
-    public boolean existById(UUID uuid){
-        return drugSetRepository.existsById(uuid);
     }
 
     public boolean existByName(DrugSet drugSet){

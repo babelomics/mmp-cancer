@@ -54,7 +54,6 @@ public class DrugSetController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))),
             @ApiResponse(responseCode = "404", description = "drugset not found") })
     @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @CrossOrigin
     public ResponseEntity<DrugSet> getDrugSetById(@PathVariable("id") String id) {
         try {
@@ -102,8 +101,8 @@ public class DrugSetController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
-    @GetMapping("/getPandrugSet")
-    public ResponseEntity<DrugSet> getPandrugSet() throws JsonProcessingException {
+    @PostMapping("/pandrugs/updates")
+    public ResponseEntity<DrugSet> updatePandrugSet() throws JsonProcessingException {
 
 
         if(!processing) {

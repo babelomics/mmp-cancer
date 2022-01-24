@@ -56,4 +56,18 @@ public class DrugService {
 
         return false;
     }
+
+    public Drug getByStandardName(List<Drug> findDrug, Drug drug){
+
+        Drug matchedDrug = null;
+
+        for(Drug drugs : findDrug){
+            if(drug.getStandardName().toLowerCase().equals(drugs.getStandardName().toLowerCase())) {
+                matchedDrug = drug;
+                return matchedDrug;
+            }
+        }
+
+        return matchedDrug;
+    }
 }
