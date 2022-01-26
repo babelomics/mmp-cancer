@@ -70,6 +70,7 @@ public class DrugSetController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))),
             @ApiResponse(responseCode = "404", description = "drugset not found") })
     @GetMapping("/{id}/updates")
+    @CrossOrigin
     public ResponseEntity<List<DrugUpdate>> getDrugSetUpdates(@PathVariable("id") String id) {
         try {
             return new ResponseEntity<>(drugSetService.getDrugSetUpdates(UUID.fromString(id)), HttpStatus.OK);
@@ -102,27 +103,28 @@ public class DrugSetController {
             @ApiResponse(responseCode = "200", description = "successful operation",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
     @PostMapping("/pandrugs/updates")
+    @CrossOrigin
     public ResponseEntity<DrugSet> updatePandrugSet() throws JsonProcessingException {
 
 
         if(!processing) {
 
-                processing = true;
-                DrugSet drugSet = panDrugsController.getAllDrugs();
+            processing = true;
+            DrugSet drugSet = panDrugsController.getAllDrugs();
 
-                System.out.print("Pandrug data received!");
+            System.out.print("Pandrug data received!");
 
-                if (!drugSetService.existByName(drugSet)) {
-                    drugSetService.saveDrugSet(drugSet);
-                } else {
-                    List<Drug> drugs = drugSet.getDrugs();
-                    drugSet = drugSetService.findByName(drugSet.getName());
-                    drugSet.setDrugs(drugs);
-                    drugSetService.updateDrugSet(drugSet);
-                }
+            if (!drugSetService.existByName(drugSet)) {
+                drugSetService.saveDrugSet(drugSet);
+            } else {
+                List<Drug> drugs = drugSet.getDrugs();
+                drugSet = drugSetService.findByName(drugSet.getName());
+                drugSet.setDrugs(drugs);
+                drugSetService.updateDrugSet(drugSet);
+            }
 
-                processing = false;
-                return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
+            processing = false;
+            return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
         }
 
         return null;
@@ -135,9 +137,10 @@ public class DrugSetController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) ,
             @ApiResponse(responseCode = "404", description = "drugset not found") })
     @PostMapping("/{id}/update")
+    @CrossOrigin
     public ResponseEntity<DrugSet> updateDrugSet(@RequestBody DrugSet drugSet) {
         try {
-             return new ResponseEntity<>(drugSetService.updateDrugSet(drugSet), HttpStatus.ACCEPTED);
+            return new ResponseEntity<>(drugSetService.updateDrugSet(drugSet), HttpStatus.ACCEPTED);
         } catch (IllegalArgumentException illegalArgumentException){
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "DrugSet Not Found", illegalArgumentException);

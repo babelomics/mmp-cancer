@@ -24,7 +24,7 @@ public class DrugService {
 
     public Drug saveDrug(Drug drug){ return drugRepository.save(drug); }
 
-    public List<Drug> saveAll(List<Drug> drugList){ return drugRepository.saveAll(drugList); }
+    public List<Drug> saveAll(List<Drug> drugList){ return (List<Drug>) drugRepository.saveAll(drugList); }
 
     public void deleteDrug(UUID id){ drugRepository.deleteById(id); }
 
@@ -37,7 +37,7 @@ public class DrugService {
     }
 
     public boolean existByStandardName(Drug drug){
-        List<Drug> findDrug = drugRepository.findAll();
+        List<Drug> findDrug = findAll();
 
         for(int i=0; i<findDrug.size(); ++i){
                 if(drug.getStandardName().toLowerCase().equals(findDrug.get(i).getStandardName().toLowerCase()))
@@ -70,4 +70,5 @@ public class DrugService {
 
         return matchedDrug;
     }
+
 }

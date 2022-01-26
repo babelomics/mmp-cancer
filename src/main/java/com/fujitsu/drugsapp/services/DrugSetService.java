@@ -62,7 +62,7 @@ public class DrugSetService {
     public List<Drug> findDrugsById(UUID uuid, String searchText, Instant date) {
         DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
         List<Drug> matchedDrugs = new ArrayList<>();
-        List<Drug> drugs = drugRepository.findAll();
+        List<Drug> drugs = drugService.findAll();
 
         if(searchText==null && date==null) {
             matchedDrugs = drugSet.getDrugs();
@@ -224,7 +224,6 @@ public class DrugSetService {
         if(drugsToUpdate.size() > 0 || drugsToInclude.size() > 0)
             transactionalDrugSetUpdate(oldDrugUpdate, newDrugUpdate, drugSet, drugsToInclude, drugsToUpdate, drugSourcesToSave, drugNameList);
     }
-
 
     public void transactionalDrugSetSave(DrugUpdate drugUpdate, DrugSet drugSet, List<Drug> drugData, List<DrugSource> drugSourceList, List<DrugName> drugNameList){
 
