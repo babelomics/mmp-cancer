@@ -64,22 +64,4 @@ public class DrugsAPIController implements DrugsAPIInterface {
         return drugSet;
     }
 
-    @Override
-    public DrugSet retrieveDrugsFromGenes(List<String> genes) {
-
-        DrugSet drugSet = null;
-        String query = PANDRUGS_BASE_URL + "?" + "gene=" + genes.get(0) + "&biomarker=true";
-        RestTemplate restTemplate = null;
-        RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
-        restTemplate = restTemplateBuilder.build();
-        String response = restTemplate.getForObject(query, String.class);
-
-        return drugSet;
-    }
-
-    @Override
-    public List<String> retrieveGenesFromVariants(List<String> variants) {
-
-        return variants;
-    }
 }

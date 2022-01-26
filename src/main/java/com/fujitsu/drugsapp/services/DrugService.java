@@ -63,7 +63,7 @@ public class DrugService {
 
         for(Drug drugs : findDrug){
             if(drug.getStandardName().toLowerCase().equals(drugs.getStandardName().toLowerCase())) {
-                matchedDrug = drug;
+                matchedDrug = drugs;
                 return matchedDrug;
             }
         }

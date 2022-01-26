@@ -6,6 +6,8 @@ import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 
@@ -29,11 +31,14 @@ public class DrugSetService {
     @Autowired
     HikariDataSource hikariDataSource;
 
+    @Autowired
+    public JdbcTemplate jdbcTemplate;
+
     private final int batchSize = 100;
 
     public List<DrugSet> findAll(String searchText){
 
-        List<DrugSet> drugSetList = drugSetRepository.findAll();
+        List<DrugSet> drugSetList = findAllByQuery();
 
         if(searchText==null) {
             return drugSetList;
@@ -164,7 +169,7 @@ public class DrugSetService {
     public void updateDrugSetContent(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate oldDrugUpdate, DrugUpdate newDrugUpdate){
 
         List<DrugSource> drugSourceList = drugSourceService.findAll();
-        List<DrugSource> drugSourcesToSave = drugSourceService.findAll();
+        List<DrugSource> drugSourcesToSave = new ArrayList<>();
 
         List<Drug> drugList = drugService.findAll();
         List<Drug> drugsToUpdate = new ArrayList<>();
@@ -178,7 +183,7 @@ public class DrugSetService {
 
             if (oldDrug != null) {
 
-                if(oldDrug.getCommonName() != newDrug.getCommonName()){
+                if(!oldDrug.getCommonName().equals(newDrug.getCommonName())){
                     hasChanged = true;
                 }
 
@@ -188,11 +193,12 @@ public class DrugSetService {
 
                 if(hasChanged) {
 
+                    newDrug.setStartUpdate(newDrugUpdate.getId());
+                    newDrug.setDrugSet(drugSet);
+                    newDrug.setId(UUID.randomUUID());
+
                     oldDrug.setNextVersion(newDrug.getId());
                     newDrug.setPreviousVersion(oldDrug.getId());
-
-                    newDrug.setStartUpdate(oldDrugUpdate.getId());
-                    newDrug.setDrugSet(drugSet);
 
                     drugsToUpdate.add(oldDrug);
                     drugsToInclude.add(newDrug);
@@ -549,7 +555,7 @@ public class DrugSetService {
                     statement.setNull(4, Types.NULL);
                 }
 
-                if (drug.getNextVersion() != null) {
+                if (drug.getPreviousVersion() != null) {
                     statement.setString(5, drug.getPreviousVersion().toString());
                 } else {
                     statement.setNull(5, Types.NULL);
@@ -596,7 +602,7 @@ public class DrugSetService {
                     statement.setNull(3, Types.NULL);
                 }
 
-                if (drug.getNextVersion() != null) {
+                if (drug.getPreviousVersion() != null) {
                     statement.setString(4, drug.getPreviousVersion().toString());
                 } else {
                     statement.setNull(4, Types.NULL);
@@ -749,7 +755,6 @@ public class DrugSetService {
         Comparator<DrugUpdate> comparator = Comparator.comparing(DrugUpdate::getCreatedAt);
 
         Collections.sort(drugUpdateList, comparator);
-        drugUpdateList.forEach(System.out::println);
 
         drugUpdateList.get(drugUpdateList.size()-1).setNextUpdateId(drugUpdate.getId());
         drugUpdate.setPreviousUpdateId(drugUpdateList.get(drugUpdateList.size()-1).getId());
@@ -770,6 +775,13 @@ public class DrugSetService {
         }
 
         return false;
+    }
+
+    public List<DrugSet> findAllByQuery(){
+        String sql = "SELECT id, name, description, created_at, updated_at FROM drug_set";
+
+        return jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper(DrugSet.class));
     }
 
 }
