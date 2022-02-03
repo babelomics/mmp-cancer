@@ -315,6 +315,7 @@ public class DrugSetService {
             connection = hikariDataSource.getConnection();
             connection.setAutoCommit(false);
 
+
             String sqlNewDrugUpdate = String.format(
                     "INSERT INTO drug_update (id, created_at, description, drug_set_id, next_update_id, previous_update_id, user_id) " +
                             "VALUES (?::UUID, ?, ?, ?::UUID,?::UUID, ?::UUID, ?::UUID)",

@@ -35,7 +35,7 @@ public class Drug {
 
     @Schema(description = "Standard name of the Drug",
             example = "Bicuculine", required = true)
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String standardName;
 
     @Schema(description = "Common name of the Drug",
@@ -60,6 +60,6 @@ public class Drug {
 
     @Schema(description = "List of associated drugNames to the Drug",
             required = true)
-    @OneToMany(mappedBy = "drug", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "drug", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private List<DrugName> drugNames = new ArrayList<>();
 }
