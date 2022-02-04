@@ -383,13 +383,13 @@ public class DrugSetService {
             updateDrugSourcesByJdbc(drugSourceList, statement);
 
             String sqlDrugNames = String.format(
-                    "UPDATE drug_name SET name=?, drug_id=?::UUID, drug_source_id=?::UUID " +
-                            "WHERE id=?::UUID",
+                    "INSERT INTO drug_name (id, name, drug_id, drug_source_id) " +
+                            "VALUES (?::UUID, ?, ?::UUID, ?::UUID)",
                     DrugName.class.getAnnotation(Table.class).name()
             );
 
             statement = connection.prepareStatement(sqlDrugNames);
-            updateDrugNamesByJdbc(drugNameList, statement);
+            saveDrugNamesByJdbc(drugNameList, statement);
 
             connection.commit();
 
