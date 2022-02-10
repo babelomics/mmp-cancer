@@ -4,9 +4,18 @@ import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugName;
 import com.fujitsu.drugsapp.entities.DrugSource;
 import com.fujitsu.drugsapp.repositories.DrugSourceRepository;
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -17,56 +26,90 @@ public class DrugSourceService {
 
     private DrugSourceRepository drugSourceRepository;
 
+    @Autowired
+    HikariDataSource hikariDataSource;
+
+    @Autowired
+    public JdbcTemplate jdbcTemplate;
+
     public List<DrugSource> findAll(){ return drugSourceRepository.findAll(); }
 
-    public DrugSource findById(UUID id){
-        return drugSourceRepository.findById(id).orElseThrow(NoSuchElementException::new);
+    public DrugSource getByShortName(DrugSource drugSource){
+
+        String sql = "SELECT * FROM drug_source " +
+                "WHERE short_name='"+drugSource.getShortName().replaceAll("'","''")+"'"; //Replace ' with '' to avoid syntax errorx
+        Connection connection = null;
+        Statement statement;
+        ResultSet rs;
+        DrugSource matchedDrugSource = new DrugSource();
+
+        try {
+            connection = hikariDataSource.getConnection();
+            statement = connection.createStatement();
+            rs = statement.executeQuery(sql);
+
+            while(rs.next())
+            {
+                matchedDrugSource.setId(rs.getObject("id",UUID.class));
+                matchedDrugSource.setShortName(rs.getObject("short_name", String.class));
+                String urlString = rs.getObject("url", String.class);
+
+                if (urlString!=null){
+                    URL url = new URL(urlString);
+                    matchedDrugSource.setUrl(url);
+                }
+            }
+
+        } catch (SQLException | MalformedURLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                assert connection != null;
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        return matchedDrugSource;
     }
 
-    public DrugSource findByShortName(String shortName){
+    public DrugSource getByShortName(List<DrugSource> drugSourceList, DrugSource drugSource){
 
-        List<DrugSource> drugSourceList = findAll();
-
-        for(DrugSource drugSource : drugSourceList){
-            if(shortName.equals(drugSource.getShortName())){
-                return drugSource;
+        for(DrugSource source : drugSourceList){
+            if(drugSource.getShortName().equalsIgnoreCase(source.getShortName())){
+                return source;
             }
         }
 
         return null;
-    }
-
-    public DrugSource findByShortName(List<DrugSource> drugSourceList, String shortName){
-
-        for(DrugSource drugSource : drugSourceList){
-            if(shortName.equals(drugSource.getShortName())){
-                return drugSource;
-            }
-        }
-
-        return null;
-    }
-
-    public DrugSource saveDrugSource(DrugSource drugSource){ return drugSourceRepository.save(drugSource); }
-
-    public List<DrugSource> saveAll(List<DrugSource> drugSourceList){ return drugSourceRepository.saveAll(drugSourceList); }
-
-    public void deleteDrugSource(UUID id){ drugSourceRepository.deleteById(id); }
-
-    public DrugSource updateDrugSource(DrugSource drugSource){
-        return drugSourceRepository.save(drugSource);
-    }
-
-    public boolean existById(UUID uuid){
-        return drugSourceRepository.existsById(uuid);
     }
 
     public boolean existByShortName(DrugSource drugSource){
-        List<DrugSource> findDrugSource = drugSourceRepository.findAll();
 
-        for(int i=0; i<findDrugSource.size(); ++i){
-            if(drugSource.getShortName().toLowerCase().equals(findDrugSource.get(i).getShortName().toLowerCase()))
-                return true;
+        String sql = "SELECT * FROM drug_source " +
+                "WHERE short_name='"+drugSource.getShortName().replaceAll("'","''")+"'"; //Replace ' with '' to avoid syntax errorx
+        Connection connection = null;
+        Statement statement;
+        ResultSet rs;
+
+        try {
+            connection = hikariDataSource.getConnection();
+            statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            rs = statement.executeQuery(sql);
+            return rs.first();
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                assert connection != null;
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         return false;
@@ -74,8 +117,8 @@ public class DrugSourceService {
 
     public boolean existByShortName(List<DrugSource> findDrugSource, DrugSource drugSource){
 
-        for(int i=0; i<findDrugSource.size(); ++i){
-            if(drugSource.getShortName().toLowerCase().equals(findDrugSource.get(i).getShortName().toLowerCase()))
+        for (DrugSource source : findDrugSource) {
+            if (drugSource.getShortName().equalsIgnoreCase(source.getShortName()))
                 return true;
         }
 

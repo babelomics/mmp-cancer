@@ -44,7 +44,7 @@ public class DrugSetController {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) })
     @GetMapping()
     @CrossOrigin
-    public ResponseEntity<List<DrugSet>> getAllDrugSets(@Parameter(description="Search Text to filter DrugSets, empty by default") @RequestParam(required = false) String searchText) throws JsonProcessingException {
+    public ResponseEntity<List<DrugSet>> getAllDrugSets(@Parameter(description="Search Text to filter DrugSets, empty by default") @RequestParam(required = false) String searchText) {
         return new ResponseEntity<>(drugSetService.findAll(searchText), HttpStatus.OK);
     }
 
@@ -106,11 +106,12 @@ public class DrugSetController {
     @CrossOrigin
     public ResponseEntity<DrugSet> updatePandrugSet() throws JsonProcessingException {
 
+        DrugSet drugSet = new DrugSet();
 
         if(!processing) {
 
             processing = true;
-            DrugSet drugSet = panDrugsController.getAllDrugs();
+            drugSet = panDrugsController.getAllDrugs();
 
             System.out.print("Pandrug data received!");
 
@@ -124,27 +125,10 @@ public class DrugSetController {
             }
 
             processing = false;
-            return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
+
         }
 
-        return null;
-    }
-
-
-    @Operation(summary = "Update a specific DrugSet by Id", description = "Endpoint to update a concrete DrugSet by %id%", tags = { "updateDrugset" })
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "successful operation",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DrugSet.class)))) ,
-            @ApiResponse(responseCode = "404", description = "drugset not found") })
-    @PostMapping("/{id}/update")
-    @CrossOrigin
-    public ResponseEntity<DrugSet> updateDrugSet(@RequestBody DrugSet drugSet) {
-        try {
-            return new ResponseEntity<>(drugSetService.updateDrugSet(drugSet), HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException illegalArgumentException){
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "DrugSet Not Found", illegalArgumentException);
-        }
+        return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
     }
 
 }

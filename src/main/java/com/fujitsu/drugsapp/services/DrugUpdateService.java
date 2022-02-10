@@ -20,32 +20,17 @@ public class DrugUpdateService {
 
     public List<DrugUpdate> findAll(){ return drugUpdateRepository.findAll(); }
 
-    public DrugUpdate findById(UUID id){
-        return drugUpdateRepository.findById(id).orElseThrow(NoSuchElementException::new);
-    }
-
     public List<DrugUpdate> findByDrugSetId(UUID drugSetId) {
         List<DrugUpdate> drugUpdateList = findAll();
         List<DrugUpdate> machedUpdates = new ArrayList<>();
 
-        for(int i=0; i<drugUpdateList.size(); ++i){
-            if(drugSetId.toString().equals(drugUpdateList.get(i).getDrugSetId().toString())){
-                machedUpdates.add(drugUpdateList.get(i));
+        for (DrugUpdate drugUpdate : drugUpdateList) {
+            if (drugSetId.toString().equals(drugUpdate.getDrugSetId().toString())) {
+                machedUpdates.add(drugUpdate);
             }
         }
 
         return machedUpdates;
     }
 
-    public DrugUpdate saveDrugUpdate(DrugUpdate drugUpdate){ return drugUpdateRepository.save(drugUpdate); }
-
-    public void deleteDrugUpdate(UUID id){ drugUpdateRepository.deleteById(id); }
-
-    public DrugUpdate updateDrugUpdate(DrugUpdate drugUpdate){
-        return drugUpdateRepository.save(drugUpdate);
-    }
-
-    public boolean existById(UUID uuid){
-        return drugUpdateRepository.existsById(uuid);
-    }
 }

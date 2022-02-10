@@ -75,11 +75,13 @@
 			<version>5.3.15</version>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-		</dependency>
 
+		<dependency>
+			<groupId>org.simpleflatmapper</groupId>
+			<artifactId>sfm-tuples</artifactId>
+			<version>8.2.3</version>
+			<scope>test</scope>
+		</dependency>
 
 	</dependencies>
 

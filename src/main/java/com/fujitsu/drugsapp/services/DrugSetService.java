@@ -5,6 +5,7 @@ import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.AllArgsConstructor;
+import org.apache.tomcat.jni.Local;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,11 +13,13 @@ import org.springframework.stereotype.Service;
 
 
 import javax.persistence.Table;
+import java.net.URL;
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @AllArgsConstructor
 @Service
@@ -62,36 +65,95 @@ public class DrugSetService {
     public List<Drug> findDrugsById(UUID uuid, String searchText, Instant date) {
         DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
         List<Drug> matchedDrugs = new ArrayList<>();
-        List<Drug> drugs = drugService.findAll();
+        Drug drug = new Drug();
+        DrugName drugName = new DrugName();
+        DrugSource drugSource = new DrugSource();
+        List<DrugName> drugNameList = new ArrayList<>();
 
         if(searchText==null && date==null) {
             matchedDrugs = drugSet.getDrugs();
-        }else if(searchText!=null && date==null){
+        }else{
 
-            for (Drug drug : drugs) {
-                if (drug.getStandardName().toLowerCase().contains(searchText.toLowerCase())
-                        || drug.getCommonName().toLowerCase().contains(searchText.toLowerCase()))
+            String sql;
+
+            if(searchText!=null && date==null){
+
+                sql = "SELECT * FROM drug d " +
+                        "JOIN drug_name dn ON dn.drug_id=d.id " +
+                        "JOIN drug_source ds ON dn.drug_source_id=ds.id " +
+                        "WHERE standard_name ~* '"+searchText.replaceAll("'","''")+"'"; //Replace ' with '' to avoid syntax errorx
+
+            }else if(searchText==null && date!=null){
+
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
+
+                sql = "SELECT * FROM drug d " +
+                        "JOIN drug_name dn ON dn.drug_id=d.id " +
+                        "JOIN drug_source ds ON dn.drug_source_id=ds.id " +
+                        "WHERE d.start_update=(SELECT id from drug_update " +
+                        "du where du.created_at >= '"+ localDateTime + "')";
+
+            }else {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
+
+                sql = "SELECT * FROM drug d " +
+                        "JOIN drug_name dn ON dn.drug_id=d.id " +
+                        "JOIN drug_source ds ON dn.drug_source_id=ds.id " +
+                        "WHERE d.standard_name ~* '" +
+                        searchText + "' AND d.start_update=(SELECT id from " +
+                        "drug_update du where du.created_at >= '"+ localDateTime + "')";
+
+            }
+
+            Connection connection = null;
+            Statement statement;
+            ResultSet rs;
+
+            try {
+                connection = hikariDataSource.getConnection();
+                statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                rs = statement.executeQuery(sql);
+
+                while(rs.next())
+                {
+                    drug.setId(rs.getObject(1,UUID.class));
+                    drug.setCommonName(rs.getObject("common_name", String.class));
+                    drug.setStandardName(rs.getObject("standard_name", String.class));
+                    drug.setEndUpdate(rs.getObject("end_update",UUID.class));
+                    drug.setStartUpdate(rs.getObject("start_update",UUID.class));
+                    drug.setNextVersion(rs.getObject("next_version",UUID.class));
+                    drug.setPreviousVersion(rs.getObject("previous_version",UUID.class));
+
+                    drugName.setId(rs.getObject(9, UUID.class));
+                    drugName.setName(rs.getObject("name",String.class));
+                    drugName.setDrug(drug);
+
+                    drugSource.setId(rs.getObject(13, UUID.class));
+                    drugSource.setShortName(rs.getObject("short_name", String.class));
+
+                    if(rs.getString("url") != null) {
+                        drugSource.setUrl(rs.getObject("url", URL.class));
+                    }
+                    drugName.setDrugSource(drugSource);
+
+                    drugNameList.add(drugName);
+
+                    drug.setDrugNames(drugNameList);
+
+                    drugNameList = new ArrayList<>();
+
                     matchedDrugs.add(drug);
-            }
-        }else if(searchText==null && date!=null){
-            LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
-            for (Drug drug : drugs) {
-                if (drugSet.getUpdatedAt().isEqual(localDateTime))
-                    matchedDrugs.add(drug);
-            }
-        }else {
-            LocalDateTime localDateTime = LocalDateTime.ofInstant(date, ZoneOffset.UTC);
-            List<Drug> matchedDrugsAux = new ArrayList<>();
+                }
 
-            for (Drug drug : drugs) {
-                if (drugSet.getUpdatedAt().isEqual(localDateTime))
-                    matchedDrugsAux.add(drug);
-            }
-
-            for(int i=0; i<matchedDrugsAux.size(); ++i){
-                if(matchedDrugsAux.get(i).getStandardName().toLowerCase().contains(searchText.toLowerCase())
-                        || matchedDrugsAux.get(i).getCommonName().toLowerCase().contains(searchText.toLowerCase()))
-                    matchedDrugs.add(drugs.get(i));
+            } catch (SQLException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    assert connection != null;
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -100,25 +162,47 @@ public class DrugSetService {
 
     public DrugSet findByName(String name){
 
-        List<DrugSet> drugSetList = drugSetRepository.findAll();
+        DrugSet matchedDrugset = new DrugSet();
 
-        for(DrugSet drugSet : drugSetList){
-            if(name.equals(drugSet.getName())){
-                return drugSet;
+        String sql = "SELECT * FROM drug_set " +
+                "WHERE name='"+ name.replaceAll("'","''")+"'"; //Replace ' with '' to avoid syntax errorx
+        Connection connection = null;
+        Statement statement;
+        ResultSet rs;
+
+        try {
+            connection = hikariDataSource.getConnection();
+            statement = connection.createStatement();
+            rs = statement.executeQuery(sql);
+
+            while(rs.next()) {
+                matchedDrugset.setId(rs.getObject("id", UUID.class));
+                matchedDrugset.setName(rs.getObject("name", String.class));
+                matchedDrugset.setCreatedAt(rs.getObject("created_at", LocalDateTime.class));
+                matchedDrugset.setDescription(rs.getObject("description", String.class));
+                matchedDrugset.setUpdatedAt(rs.getObject("updated_at", LocalDateTime.class));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                assert connection != null;
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
 
-        return null;
+        return matchedDrugset;
     }
 
-    public DrugSet saveDrugSet(DrugSet drugSet){
+    public void saveDrugSet(DrugSet drugSet){
         List<Drug> newDrugs = drugSet.getDrugs();
 
         DrugUpdate drugUpdate = registerUpdate(drugSet.getId());
 
         registerDrugSet(drugSet, newDrugs, drugUpdate);
-
-        return drugSet;
     }
 
     public DrugUpdate registerUpdate(UUID drugSetId){
@@ -130,7 +214,7 @@ public class DrugSetService {
 
     public void registerDrugSet(DrugSet drugSet, List<Drug> newDrugs, DrugUpdate drugUpdate){
 
-        boolean exists = false;
+        boolean exists;
         List<DrugSource> drugSourceList = drugSourceService.findAll();
         List<DrugSource> drugSourcesToSave = drugSourceService.findAll();
 
@@ -139,7 +223,7 @@ public class DrugSetService {
 
         for (Drug newDrug : newDrugs) {
 
-            exists = drugService.existByStandardName(drugList, newDrug);
+            exists = drugService.existByStandardName(newDrug);
 
             if (!exists) {
 
@@ -150,7 +234,7 @@ public class DrugSetService {
                         drugSourcesToSave.add(drugName.getDrugSource());
                         drugSourceList.add(drugName.getDrugSource());
                     } else {
-                        DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
+                        DrugSource drugSource = drugSourceService.getByShortName(drugSourceList, drugName.getDrugSource());
                         drugName.setDrugSource(drugSource);
                     }
 
@@ -172,13 +256,20 @@ public class DrugSetService {
         List<DrugSource> drugSourcesToSave = new ArrayList<>();
 
         List<Drug> drugList = drugService.findAll();
+        Set<String> unavailableItems = newDrugs.stream()
+                .map(Drug::getStandardName)
+                .collect(Collectors.toSet());
+
+        List<Drug> deletedDrugs = drugList.stream()
+                .filter(e -> !unavailableItems.contains(e.getStandardName())).toList();
+
         List<Drug> drugsToUpdate = new ArrayList<>();
         List<Drug> drugsToInclude = new ArrayList<>();
         List<DrugName> drugNameList = new ArrayList<>();
 
         for (Drug newDrug : newDrugs) {
 
-            Drug oldDrug = drugService.getByStandardName(drugList, newDrug);
+            Drug oldDrug = drugService.getByStandardName(newDrug);
             boolean hasChanged = false;
 
             if (oldDrug != null) {
@@ -210,7 +301,7 @@ public class DrugSetService {
                             drugSourcesToSave.add(drugName.getDrugSource());
                             drugSourceList.add(drugName.getDrugSource());
                         } else {
-                            DrugSource drugSource = drugSourceService.findByShortName(drugSourceList, drugName.getDrugSource().getShortName());
+                            DrugSource drugSource = drugSourceService.getByShortName(drugName.getDrugSource());
                             drugName.setDrugSource(drugSource);
                         }
 
@@ -221,8 +312,19 @@ public class DrugSetService {
             }
         }
 
-        if(drugsToUpdate.size() > 0 || drugsToInclude.size() > 0)
+
+        if (deletedDrugs.size() > 0){
+
+            for(Drug drug : deletedDrugs){
+                drug.setEndUpdate(newDrugUpdate.getId());
+                drugsToUpdate.add(drug);
+            }
+        }
+
+
+        if(drugsToUpdate.size() > 0 || drugsToInclude.size() > 0) {
             transactionalDrugSetUpdate(oldDrugUpdate, newDrugUpdate, drugSet, drugsToInclude, drugsToUpdate, drugSourcesToSave, drugNameList);
+        }
     }
 
     public void transactionalDrugSetSave(DrugUpdate drugUpdate, DrugSet drugSet, List<Drug> drugData, List<DrugSource> drugSourceList, List<DrugName> drugNameList){
@@ -288,6 +390,7 @@ public class DrugSetService {
 
         } catch(SQLException sqlex){
             try {
+                assert connection != null;
                 connection.rollback();
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -295,6 +398,7 @@ public class DrugSetService {
         }finally {
             try {
                 if(null != connection) {
+                    assert statement != null;
                     statement.close();
                     connection.close();
                 }
@@ -362,7 +466,7 @@ public class DrugSetService {
             if(drugsToUpdate.size() > 0) {
 
                 String sqlDrugsToUpdate = String.format(
-                        "UPDATE drug SET common_name=?, end_update=?, next_version=?::UUID, previous_version=?::UUID, standard_name=?, start_update=?::UUID, drugset_id=?::UUID " +
+                        "UPDATE drug SET common_name=?, end_update=?::UUID, next_version=?::UUID, previous_version=?::UUID, standard_name=?, start_update=?::UUID, drugset_id=?::UUID " +
                                 "WHERE id=?::UUID",
                         Drug.class.getAnnotation(Table.class).name()
                 );
@@ -373,14 +477,14 @@ public class DrugSetService {
             }
 
             String sqlDrugSources = String.format(
-                    "UPDATE drug_source SET short_name=?, url=? " +
-                            "WHERE id=?::UUID",
+                    "INSERT INTO drug_source (id, short_name, url) " +
+                            "VALUES (?::UUID, ?, ?)",
                     DrugSource.class.getAnnotation(Table.class).name()
             );
 
             statement = connection.prepareStatement(sqlDrugSources);
 
-            updateDrugSourcesByJdbc(drugSourceList, statement);
+            saveDrugSourcesByJdbc(drugSourceList, statement);
 
             String sqlDrugNames = String.format(
                     "INSERT INTO drug_name (id, name, drug_id, drug_source_id) " +
@@ -395,6 +499,7 @@ public class DrugSetService {
 
         } catch(SQLException sqlex){
             try {
+                assert connection != null;
                 connection.rollback();
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -402,6 +507,7 @@ public class DrugSetService {
         }finally {
             try {
                 if(null != connection) {
+                    assert statement != null;
                     statement.close();
                     connection.close();
                 }
@@ -657,31 +763,6 @@ public class DrugSetService {
         }
     }
 
-    public void updateDrugNamesByJdbc(List<DrugName> drugNameData, PreparedStatement statement){
-
-        int counter = 0;
-
-        try{
-
-            for (DrugName drugName : drugNameData) {
-                statement.clearParameters();
-                statement.setString(1, drugName.getName());
-                statement.setString(2, drugName.getDrug().getId().toString());
-                statement.setString(3, drugName.getDrugSource().getId().toString());
-                statement.setString(4, drugName.getId().toString());
-
-                statement.addBatch();
-                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugNameData.size()) {
-                    statement.executeBatch();
-                    statement.clearBatch();
-                }
-                counter++;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public void saveDrugSourcesByJdbc(List<DrugSource> drugSourceData, PreparedStatement statement){
 
         int counter = 0;
@@ -743,7 +824,7 @@ public class DrugSetService {
         return drugUpdateService.findByDrugSetId(drugSetId);
     }
 
-    public DrugSet updateDrugSet(DrugSet drugSet){
+    public void updateDrugSet(DrugSet drugSet){
 
         List<Drug> newDrugs = drugSet.getDrugs();
         drugSet.setDrugs(null);
@@ -754,7 +835,7 @@ public class DrugSetService {
 
         Comparator<DrugUpdate> comparator = Comparator.comparing(DrugUpdate::getCreatedAt);
 
-        Collections.sort(drugUpdateList, comparator);
+        drugUpdateList.sort(comparator);
 
         drugUpdateList.get(drugUpdateList.size()-1).setNextUpdateId(drugUpdate.getId());
         drugUpdate.setPreviousUpdateId(drugUpdateList.get(drugUpdateList.size()-1).getId());
@@ -762,19 +843,36 @@ public class DrugSetService {
         drugSet.setUpdatedAt(drugUpdate.getCreatedAt());
 
         updateDrugSetContent(drugSet, newDrugs, drugUpdateList.get(drugUpdateList.size()-1), drugUpdate);
-
-        return drugSet;
     }
 
     public boolean existByName(DrugSet drugSet){
-        List<DrugSet> findDrugSet = drugSetRepository.findAll();
 
-        for (DrugSet set : findDrugSet) {
-            if (drugSet.getName().toLowerCase().equals(set.getName().toLowerCase()))
-                return true;
+        String sql = "SELECT * FROM drug_set " +
+                "WHERE name='"+drugSet.getName().replaceAll("'","''")+"'"; //Replace ' with '' to avoid syntax errorx
+        Connection connection = null;
+        Statement statement;
+        ResultSet rs;
+
+        try {
+            connection = hikariDataSource.getConnection();
+            statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            rs = statement.executeQuery(sql);
+            return rs.first();
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                assert connection != null;
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         return false;
+
     }
 
     public List<DrugSet> findAllByQuery(){
