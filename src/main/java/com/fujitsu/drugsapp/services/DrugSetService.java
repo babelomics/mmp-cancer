@@ -90,7 +90,7 @@ public class DrugSetService {
                 sql = "SELECT * FROM drug d " +
                         "JOIN drug_name dn ON dn.drug_id=d.id " +
                         "JOIN drug_source ds ON dn.drug_source_id=ds.id " +
-                        "WHERE d.start_update=(SELECT id from drug_update " +
+                        "WHERE d.start_update IN (SELECT id from drug_update " +
                         "du where du.created_at >= '"+ localDateTime + "')";
 
             }else {
@@ -100,7 +100,7 @@ public class DrugSetService {
                         "JOIN drug_name dn ON dn.drug_id=d.id " +
                         "JOIN drug_source ds ON dn.drug_source_id=ds.id " +
                         "WHERE d.standard_name ~* '" +
-                        searchText + "' AND d.start_update=(SELECT id from " +
+                        searchText + "' AND d.start_update IN (SELECT id from " +
                         "drug_update du where du.created_at >= '"+ localDateTime + "')";
 
             }
