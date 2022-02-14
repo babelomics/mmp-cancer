@@ -65,10 +65,6 @@ public class DrugSetService {
     public List<Drug> findDrugsById(UUID uuid, String searchText, Instant date) {
         DrugSet drugSet = drugSetRepository.findById(uuid).orElseThrow(NoSuchElementException::new);
         List<Drug> matchedDrugs = new ArrayList<>();
-        Drug drug = new Drug();
-        DrugName drugName = new DrugName();
-        DrugSource drugSource = new DrugSource();
-        List<DrugName> drugNameList = new ArrayList<>();
 
         if(searchText==null && date==null) {
             matchedDrugs = drugSet.getDrugs();
@@ -116,6 +112,10 @@ public class DrugSetService {
 
                 while(rs.next())
                 {
+                    Drug drug = new Drug();
+                    DrugName drugName = new DrugName();
+                    DrugSource drugSource = new DrugSource();
+                    List<DrugName> drugNameList = new ArrayList<>();
                     drug.setId(rs.getObject(1,UUID.class));
                     drug.setCommonName(rs.getObject("common_name", String.class));
                     drug.setStandardName(rs.getObject("standard_name", String.class));
@@ -139,8 +139,6 @@ public class DrugSetService {
                     drugNameList.add(drugName);
 
                     drug.setDrugNames(drugNameList);
-
-                    drugNameList = new ArrayList<>();
 
                     matchedDrugs.add(drug);
                 }
