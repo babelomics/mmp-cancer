@@ -5,7 +5,6 @@ import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.fujitsu.drugsapp.repositories.DrugSetRepository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.AllArgsConstructor;
-import org.apache.tomcat.jni.Local;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;

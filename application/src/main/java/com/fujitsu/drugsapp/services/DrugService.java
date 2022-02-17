@@ -2,17 +2,14 @@ package com.fujitsu.drugsapp.services;
 
 import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugName;
-import com.fujitsu.drugsapp.entities.DrugSet;
 import com.fujitsu.drugsapp.entities.DrugSource;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;

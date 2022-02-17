@@ -1,7 +1,6 @@
 package com.fujitsu.drugsapp.entities;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fujitsu.drugsapp.entities.DrugSet;
 import lombok.Getter;
 import lombok.Setter;
 

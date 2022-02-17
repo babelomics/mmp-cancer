@@ -1,7 +1,5 @@
 package com.fujitsu.drugsapp.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -9,7 +7,6 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 

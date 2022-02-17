@@ -1,7 +1,5 @@
 package com.fujitsu.drugsapp.services;
 
-import com.fujitsu.drugsapp.entities.Drug;
-import com.fujitsu.drugsapp.entities.DrugName;
 import com.fujitsu.drugsapp.entities.DrugSource;
 import com.fujitsu.drugsapp.repositories.DrugSourceRepository;
 import com.zaxxer.hikari.HikariDataSource;
@@ -17,7 +15,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @AllArgsConstructor
