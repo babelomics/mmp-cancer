@@ -6,6 +6,7 @@ import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugSet;
 import com.fujitsu.drugsapp.entities.DrugUpdate;
 import com.fujitsu.drugsapp.services.DrugSetService;
+import com.fujitsu.drugsapp.springBatch.AddUpdateJobConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -15,6 +16,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +40,12 @@ public class DrugSetController {
     @Autowired
     private DrugSetService drugSetService;
     private boolean processing = false;
+
+    @Autowired
+    private AddUpdateJobConfig addUpdateJobConfig;
+
+    @Autowired
+    private JobLauncher jobLauncher;
 
     private final DrugsAPIController panDrugsController = new DrugsAPIController();
 
@@ -107,25 +118,15 @@ public class DrugSetController {
     public ResponseEntity<DrugSet> updatePandrugSet() throws JsonProcessingException {
 
         DrugSet drugSet = new DrugSet();
+        Job job = addUpdateJobConfig.queueDrugsetJob();
 
-        if(!processing) {
-
-            processing = true;
-            drugSet = panDrugsController.getAllDrugs();
-
-            System.out.print("Pandrug data received!");
-
-            if (!drugSetService.existByName(drugSet)) {
-                drugSetService.saveDrugSet(drugSet);
-            } else {
-                List<Drug> drugs = drugSet.getDrugs();
-                drugSet = drugSetService.findByName(drugSet.getName());
-                drugSet.setDrugs(drugs);
-                drugSetService.updateDrugSet(drugSet);
-            }
-
-            processing = false;
-
+        try {
+            jobLauncher.run(job,  new JobParametersBuilder()
+                    .addLong("timestamp",
+                            System.currentTimeMillis())
+                    .toJobParameters());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);

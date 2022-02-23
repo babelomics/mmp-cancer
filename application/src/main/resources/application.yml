@@ -3,6 +3,8 @@ spring:
         name: DrugsApp
     data:
         jpa.repositories.enabled: true
+    batch:
+        initialize-schema: always
     datasource:
         initialization-mode: always
         driver-class-name: org.postgresql.Driver
