@@ -1,3 +1,5 @@
+package com.fujitsu.updatesets;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fujitsu.drugsapp.controllers.DrugsAPIController;
 import com.fujitsu.drugsapp.entities.Drug;
@@ -6,12 +8,10 @@ import com.fujitsu.drugsapp.services.DrugSetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
 
 import java.util.List;
 
-@ComponentScan("com.fujitsu")
-@SpringBootApplication
+
 public class UpdateDrugset {
 
     public static void main(String[] args) {

@@ -129,7 +129,7 @@ public class DrugSetController {
             e.printStackTrace();
         }
 
-        return new ResponseEntity<>(drugSetService.findById(drugSet.getId()), HttpStatus.OK);
+        return new ResponseEntity<>(drugSet, HttpStatus.OK);
     }
 
 }

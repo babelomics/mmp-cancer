@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: UpdateSets
+  data:
+    jpa.repositories.enabled: true
+  batch:
+    initialize-schema: always
+  datasource:
+    initialization-mode: always
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/drugs_db?reWriteBatchedInserts=true
+    username: admin
+    password: admin1029384756*
+    continueOnError: true
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQL9Dialect
+    hibernate:
+      ddl-auto: update
+      use-new-id-generator-mappings: true
+      generate-ddl: true
+    properties:
+      hibernate:
+        jdbc.lob.non_contextual_creation: true
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
+        generate_statistics: true
+        jdbc:
+          lob.non_contextual_creation: true
+          fetch_size: 100
+          batch_size: 100
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8081

@@ -3,37 +3,23 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.springframework</groupId>
-    <artifactId>gs-multi-module</artifactId>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.6.1</version>
+    </parent>
+
+    <groupId>com.fujitsu</groupId>
+    <artifactId>mmp-cancer</artifactId>
     <version>0.1.0</version>
     <properties>
         <java.version>17</java.version>
     </properties>
     <packaging>pom</packaging>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.8.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-            <version>2.6.1</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.data</groupId>
-            <artifactId>spring-data-jpa</artifactId>
-            <version>2.6.0</version>
-            <scope>compile</scope>
-        </dependency>
-    </dependencies>
-
     <modules>
-        <module>application</module>
-        <module>updateSets</module>
+        <module>drugsapp</module>
+        <module>updatesets</module>
     </modules>
 
 </project>

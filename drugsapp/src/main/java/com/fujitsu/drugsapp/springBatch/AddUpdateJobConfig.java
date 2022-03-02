@@ -1,6 +1,10 @@
 package com.fujitsu.drugsapp.springBatch;
 
 import com.fujitsu.drugsapp.entities.DrugSet;
+import com.fujitsu.drugsapp.entities.JobSynchronization;
+import com.fujitsu.drugsapp.repositories.DrugRepository;
+import com.fujitsu.drugsapp.repositories.JobSynchronizationRepository;
+import com.fujitsu.drugsapp.services.JobSynchronizationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -20,9 +24,11 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.PreDestroy;
+import java.util.concurrent.Flow;
 
 @Slf4j
 @Configuration
@@ -31,6 +37,9 @@ import javax.annotation.PreDestroy;
 public class AddUpdateJobConfig {
 
     public static final String TASKLET_STEP = "taskletStep";
+
+    @Autowired
+    private JobSynchronizationService jobSynchronizationService;
 
     private static final String JOB_NAME = "addUpdateJob";
 
@@ -60,32 +69,25 @@ public class AddUpdateJobConfig {
     public Job queueDrugsetJob() {
         return jobBuilders.get(JOB_NAME)
                 .start(taskletStep())
-                .next(chunkStep())
                 .build();
     }
 
-    @Bean
     public Step taskletStep() {
         return stepBuilders.get(TASKLET_STEP)
                 .tasklet(tasklet())
                 .build();
     }
 
-    @Bean
     public Tasklet tasklet() {
+
+        JobSynchronization jobSynchronization = new JobSynchronization();
+        jobSynchronization.setStatus("Waiting");
+
+        jobSynchronizationService.save(jobSynchronization);
+
         return (contribution, chunkContext) -> {
             return RepeatStatus.FINISHED;
         };
-    }
-
-    @Bean
-    public Step chunkStep() {
-        return stepBuilders.get("chunkStep")
-                .<DrugSet, DrugSet>chunk(20)
-                .reader(reader())
-                .processor(processor())
-                .writer(writer())
-                .build();
     }
 
     @StepScope
