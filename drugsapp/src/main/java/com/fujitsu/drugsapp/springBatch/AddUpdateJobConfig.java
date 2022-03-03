@@ -1,9 +1,13 @@
 package com.fujitsu.drugsapp.springBatch;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fujitsu.drugsapp.controllers.DrugsAPIController;
+import com.fujitsu.drugsapp.entities.Drug;
 import com.fujitsu.drugsapp.entities.DrugSet;
 import com.fujitsu.drugsapp.entities.JobSynchronization;
 import com.fujitsu.drugsapp.repositories.DrugRepository;
 import com.fujitsu.drugsapp.repositories.JobSynchronizationRepository;
+import com.fujitsu.drugsapp.services.DrugSetService;
 import com.fujitsu.drugsapp.services.JobSynchronizationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -28,6 +32,7 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.PreDestroy;
+import java.util.List;
 import java.util.concurrent.Flow;
 
 @Slf4j
@@ -37,6 +42,9 @@ import java.util.concurrent.Flow;
 public class AddUpdateJobConfig {
 
     public static final String TASKLET_STEP = "taskletStep";
+
+    @Autowired
+    private DrugSetService drugSetService;
 
     @Autowired
     private JobSynchronizationService jobSynchronizationService;
@@ -68,22 +76,62 @@ public class AddUpdateJobConfig {
 
     public Job queueDrugsetJob() {
         return jobBuilders.get(JOB_NAME)
-                .start(taskletStep())
+                .start(waitingTaskletStep())
                 .build();
     }
 
-    public Step taskletStep() {
+    public Job processUpdate(JobSynchronization jobSynchronization) throws JsonProcessingException {
+        return jobBuilders.get(JOB_NAME)
+                .start(runningTaskletStep(jobSynchronization))
+                .build();
+    }
+
+    public Step waitingTaskletStep() {
         return stepBuilders.get(TASKLET_STEP)
-                .tasklet(tasklet())
+                .tasklet(waitingTasklet())
                 .build();
     }
 
-    public Tasklet tasklet() {
+    public Step runningTaskletStep(JobSynchronization jobSynchronization) throws JsonProcessingException {
+        return stepBuilders.get(TASKLET_STEP)
+                .tasklet(runningTasklet(jobSynchronization))
+                .build();
+    }
+
+    public Tasklet waitingTasklet() {
 
         JobSynchronization jobSynchronization = new JobSynchronization();
         jobSynchronization.setStatus("Waiting");
 
         jobSynchronizationService.save(jobSynchronization);
+
+        return (contribution, chunkContext) -> {
+            return RepeatStatus.FINISHED;
+        };
+    }
+
+    public Tasklet runningTasklet(JobSynchronization jobSynchronization) throws JsonProcessingException {
+
+        jobSynchronization.setStatus("Running");
+
+        jobSynchronizationService.update(jobSynchronization);
+
+        DrugSet drugSet = new DrugSet();
+        DrugsAPIController panDrugsController = new DrugsAPIController();
+        drugSet = panDrugsController.getAllDrugs();
+
+        System.out.print("Updating Pandrugs set!!!!");
+        if (!drugSetService.existByName(drugSet)) {
+            drugSetService.saveDrugSet(drugSet);
+        } else {
+            List<Drug> drugs = drugSet.getDrugs();
+            drugSet = drugSetService.findByName(drugSet.getName());
+            drugSet.setDrugs(drugs);
+            drugSetService.updateDrugSet(drugSet);
+        }
+
+        jobSynchronization.setStatus("Complete");
+        jobSynchronizationService.update(jobSynchronization);
 
         return (contribution, chunkContext) -> {
             return RepeatStatus.FINISHED;

@@ -19,6 +19,8 @@ public class JobSynchronization {
     @Id
     private UUID id = UUID.randomUUID();
 
+    private UUID drugsetId;
+
     private String status;
 
 }

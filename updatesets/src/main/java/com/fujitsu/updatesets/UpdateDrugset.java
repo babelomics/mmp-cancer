@@ -8,38 +8,18 @@ import com.fujitsu.drugsapp.services.DrugSetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-
+@SpringBootApplication(scanBasePackages = "com.fujitsu.drugsapp")
+@Configuration
+@EnableScheduling
 public class UpdateDrugset {
 
     public static void main(String[] args) {
         SpringApplication.run(UpdateDrugset.class, args);
-    }
-
-    @Autowired
-    private DrugSetService drugSetService;
-
-    public DrugSet getPandrugSet() throws JsonProcessingException {
-        DrugSet drugSet = new DrugSet();
-        DrugsAPIController panDrugsController = new DrugsAPIController();
-        drugSet = panDrugsController.getAllDrugs();
-
-        return drugSet;
-    }
-
-    public DrugSet AsyncUpdateDrugset(DrugSet drugSet) {
-
-        if (!drugSetService.existByName(drugSet)) {
-            drugSetService.saveDrugSet(drugSet);
-        } else {
-            List<Drug> drugs = drugSet.getDrugs();
-            drugSet = drugSetService.findByName(drugSet.getName());
-            drugSet.setDrugs(drugs);
-            drugSetService.updateDrugSet(drugSet);
-        }
-
-        return drugSet;
     }
 }
