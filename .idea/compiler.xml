@@ -19,6 +19,7 @@
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="drugsapp" options="-parameters" />
+      <module name="mmp-cancer" options="-parameters" />
       <module name="ms-user-management" options="-parameters" />
       <module name="updateSets" options="-parameters" />
       <module name="updatesets" options="-parameters" />
