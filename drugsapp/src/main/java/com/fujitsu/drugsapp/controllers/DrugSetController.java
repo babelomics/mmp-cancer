@@ -2,11 +2,12 @@ package com.fujitsu.drugsapp.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import com.fujitsu.drugsapp.entities.Drug;
-import com.fujitsu.drugsapp.entities.DrugSet;
-import com.fujitsu.drugsapp.entities.DrugUpdate;
-import com.fujitsu.drugsapp.services.DrugSetService;
-import com.fujitsu.drugsapp.springBatch.AddUpdateJobConfig;
+import com.fujitsu.commondependencies.controllers.DrugsAPIController;
+import com.fujitsu.commondependencies.entities.Drug;
+import com.fujitsu.commondependencies.entities.DrugSet;
+import com.fujitsu.commondependencies.entities.DrugUpdate;
+import com.fujitsu.commondependencies.services.DrugSetService;
+import com.fujitsu.commondependencies.springBatch.AddUpdateJobConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -20,7 +21,6 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

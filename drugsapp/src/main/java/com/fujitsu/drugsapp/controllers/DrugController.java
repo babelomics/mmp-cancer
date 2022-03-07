@@ -1,9 +1,9 @@
 package com.fujitsu.drugsapp.controllers;
 
-import com.fujitsu.drugsapp.entities.Drug;
-import com.fujitsu.drugsapp.entities.DrugSet;
-import com.fujitsu.drugsapp.services.DrugService;
-import com.fujitsu.drugsapp.services.DrugSetService;
+import com.fujitsu.commondependencies.entities.Drug;
+import com.fujitsu.commondependencies.entities.DrugSet;
+import com.fujitsu.commondependencies.services.DrugService;
+import com.fujitsu.commondependencies.services.DrugSetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;

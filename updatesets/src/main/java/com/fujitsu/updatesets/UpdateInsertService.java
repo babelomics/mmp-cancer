@@ -1,13 +1,9 @@
 package com.fujitsu.updatesets;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fujitsu.drugsapp.controllers.DrugsAPIController;
-import com.fujitsu.drugsapp.entities.Drug;
-import com.fujitsu.drugsapp.entities.DrugSet;
-import com.fujitsu.drugsapp.entities.JobSynchronization;
-import com.fujitsu.drugsapp.repositories.JobSynchronizationRepository;
-import com.fujitsu.drugsapp.services.DrugSetService;
-import com.fujitsu.drugsapp.springBatch.AddUpdateJobConfig;
+import com.fujitsu.commondependencies.repositories.JobSynchronizationRepository;
+import com.fujitsu.commondependencies.springBatch.AddUpdateJobConfig;
+import com.fujitsu.commondependencies.entities.JobSynchronization;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
