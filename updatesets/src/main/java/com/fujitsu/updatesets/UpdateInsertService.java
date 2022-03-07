@@ -4,18 +4,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fujitsu.commondependencies.repositories.JobSynchronizationRepository;
 import com.fujitsu.commondependencies.springBatch.AddUpdateJobConfig;
 import com.fujitsu.commondependencies.entities.JobSynchronization;
+import lombok.AllArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@AllArgsConstructor
 @Service
 public class UpdateInsertService {
-
 
     @Autowired
     private JobSynchronizationRepository jobSynchronizationRepository;
@@ -26,8 +29,9 @@ public class UpdateInsertService {
     @Autowired
     private JobLauncher jobLauncher;
 
-    @Scheduled(fixedRate=30000)
-    public void checkForUpdate() throws JsonProcessingException {
+    public void checkForUpdate() throws JsonProcessingException, InterruptedException{
+
+        System.out.print("Checking for Waiting jobs...");
         List<JobSynchronization> jobSynchronizationList = jobSynchronizationRepository.findJobs("Waiting");
 
         if (jobSynchronizationList.size() > 0) {

@@ -23,6 +23,7 @@ import java.util.UUID;
 @Service
 public class DrugService {
 
+    @Autowired
     private final DrugRepository drugRepository;
 
     @Autowired

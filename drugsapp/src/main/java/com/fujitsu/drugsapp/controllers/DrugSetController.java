@@ -8,6 +8,7 @@ import com.fujitsu.commondependencies.entities.DrugSet;
 import com.fujitsu.commondependencies.entities.DrugUpdate;
 import com.fujitsu.commondependencies.services.DrugSetService;
 import com.fujitsu.commondependencies.springBatch.AddUpdateJobConfig;
+import com.fujitsu.updatesets.UpdateInsertService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -41,6 +42,9 @@ public class DrugSetController {
     private boolean processing = false;
 
     @Autowired
+    UpdateInsertService updateInsertService;
+
+    @Autowired
     private AddUpdateJobConfig addUpdateJobConfig;
 
     @Autowired
@@ -55,7 +59,8 @@ public class DrugSetController {
     @GetMapping()
     @CrossOrigin
     public ResponseEntity<List<DrugSet>> getAllDrugSets(@Parameter(description="Search Text to filter DrugSets, empty by default") @RequestParam(required = false) String searchText) {
-        return new ResponseEntity<>(drugSetService.findAll(searchText), HttpStatus.OK);
+        List<DrugSet> drugSet = drugSetService.findAll(searchText);
+        return new ResponseEntity<>(drugSet, HttpStatus.OK);
     }
 
     @Operation(summary = "Filter by Id", description = "Retrieve a specific DrugSet by %id%", tags = { "drugsetId" })
@@ -125,6 +130,8 @@ public class DrugSetController {
                             System.currentTimeMillis())
                     .toJobParameters());
 
+            Runtime r = Runtime.getRuntime();
+            r.exec("java -jar ../updatesets/target/updatesets-0.0.1-SNAPSHOT.jar");
         } catch (Exception e) {
             e.printStackTrace();
         }

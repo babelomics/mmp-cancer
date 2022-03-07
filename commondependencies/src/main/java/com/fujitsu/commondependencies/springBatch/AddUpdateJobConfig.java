@@ -112,22 +112,27 @@ public class AddUpdateJobConfig {
 
         jobSynchronizationService.update(jobSynchronization);
 
-        DrugSet drugSet = new DrugSet();
-        DrugsAPIController panDrugsController = new DrugsAPIController();
-        drugSet = panDrugsController.getAllDrugs();
+        try {
+            DrugSet drugSet = new DrugSet();
+            DrugsAPIController panDrugsController = new DrugsAPIController();
+            drugSet = panDrugsController.getAllDrugs();
 
-        System.out.print("Updating Pandrugs set!!!!");
-        if (!drugSetService.existByName(drugSet)) {
-            drugSetService.saveDrugSet(drugSet);
-        } else {
-            List<Drug> drugs = drugSet.getDrugs();
-            drugSet = drugSetService.findByName(drugSet.getName());
-            drugSet.setDrugs(drugs);
-            drugSetService.updateDrugSet(drugSet);
+            System.out.print("Updating Pandrugs set!!!!");
+            if (!drugSetService.existByName(drugSet)) {
+                drugSetService.saveDrugSet(drugSet);
+            } else {
+                List<Drug> drugs = drugSet.getDrugs();
+                drugSet = drugSetService.findByName(drugSet.getName());
+                drugSet.setDrugs(drugs);
+                drugSetService.updateDrugSet(drugSet);
+            }
+
+            jobSynchronization.setStatus("Complete");
+        } catch (Exception e) {
+            jobSynchronization.setStatus("Failed");
+        } finally {
+            jobSynchronizationService.update(jobSynchronization);
         }
-
-        jobSynchronization.setStatus("Complete");
-        jobSynchronizationService.update(jobSynchronization);
 
         return (contribution, chunkContext) -> {
             return RepeatStatus.FINISHED;
