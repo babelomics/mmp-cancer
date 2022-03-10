@@ -29,23 +29,32 @@ public class UpdateInsertService {
     @Autowired
     private JobLauncher jobLauncher;
 
+    @Autowired
+    ShutdownManager shutdownManager;
+
     public void checkForUpdate() throws JsonProcessingException, InterruptedException{
 
         System.out.print("Checking for Waiting jobs...");
         List<JobSynchronization> jobSynchronizationList = jobSynchronizationRepository.findJobs("Waiting");
 
         if (jobSynchronizationList.size() > 0) {
-            Job job = addUpdateJobConfig.processUpdate(jobSynchronizationList.get(0));
+            for (JobSynchronization jobSynchronization : jobSynchronizationList) {
+                Job job = addUpdateJobConfig.processUpdate(jobSynchronization);
 
-            try {
-                jobLauncher.run(job, new JobParametersBuilder()
-                        .addLong("timestamp",
-                                System.currentTimeMillis())
-                        .toJobParameters());
+                try {
+                    jobLauncher.run(job, new JobParametersBuilder()
+                            .addLong("timestamp",
+                                    System.currentTimeMillis())
+                            .toJobParameters());
 
-            } catch (Exception e) {
-                e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    shutdownManager.initiateShutdown(0);
+                }
             }
+        } else {
+            shutdownManager.initiateShutdown(0);
         }
     }
 }

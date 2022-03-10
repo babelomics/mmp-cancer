@@ -12,6 +12,7 @@
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
 
+    <groupId>com.fujitsu</groupId>
     <artifactId>updatesets</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>MMP-Cancer DrugUpdate Microservice</name>
@@ -62,6 +63,10 @@
             <version>2.13.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
 
     </dependencies>
 

@@ -8,7 +8,6 @@ import com.fujitsu.commondependencies.entities.DrugSet;
 import com.fujitsu.commondependencies.entities.DrugUpdate;
 import com.fujitsu.commondependencies.services.DrugSetService;
 import com.fujitsu.commondependencies.springBatch.AddUpdateJobConfig;
-import com.fujitsu.updatesets.UpdateInsertService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -40,9 +39,6 @@ public class DrugSetController {
     @Autowired
     private DrugSetService drugSetService;
     private boolean processing = false;
-
-    @Autowired
-    UpdateInsertService updateInsertService;
 
     @Autowired
     private AddUpdateJobConfig addUpdateJobConfig;
