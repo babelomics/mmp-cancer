@@ -22,6 +22,7 @@ public class JobSynchronizationService {
         return jobSynchronizationRepository.findJobs("Waiting");
     }
 
+    public List<JobSynchronization> getAllJobs() { return jobSynchronizationRepository.findAll(); }
 
 
 }
