@@ -118,7 +118,7 @@ public class DrugSetController {
     public ResponseEntity<DrugSet> updatePandrugSet() throws JsonProcessingException {
 
         DrugSet drugSet = new DrugSet();
-        Job job = addUpdateJobConfig.queueDrugsetJob();
+        Job job = addUpdateJobConfig.queueDrugsetJob("Pandrugs DrugSet");
 
         try {
             jobLauncher.run(job,  new JobParametersBuilder()
@@ -127,7 +127,7 @@ public class DrugSetController {
                     .toJobParameters());
 
             Runtime r = Runtime.getRuntime();
-            r.exec("java -jar ../updatesets/target/updatesets-0.0.1-SNAPSHOT.jar");
+            r.exec("java -jar updatesets/target/updatesets-0.0.1-SNAPSHOT.jar");
         } catch (Exception e) {
             e.printStackTrace();
         }

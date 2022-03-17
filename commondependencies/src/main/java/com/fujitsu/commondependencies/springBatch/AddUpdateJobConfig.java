@@ -30,6 +30,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.PreDestroy;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Configuration
@@ -70,9 +71,9 @@ public class AddUpdateJobConfig {
 
     }
 
-    public Job queueDrugsetJob() {
+    public Job queueDrugsetJob(String drugSetName) {
         return jobBuilders.get(JOB_NAME)
-                .start(waitingTaskletStep())
+                .start(waitingTaskletStep(drugSetName))
                 .build();
     }
 
@@ -82,9 +83,9 @@ public class AddUpdateJobConfig {
                 .build();
     }
 
-    public Step waitingTaskletStep() {
+    public Step waitingTaskletStep(String drugSetName) {
         return stepBuilders.get(TASKLET_STEP)
-                .tasklet(waitingTasklet())
+                .tasklet(waitingTasklet(drugSetName))
                 .build();
     }
 
@@ -94,10 +95,11 @@ public class AddUpdateJobConfig {
                 .build();
     }
 
-    public Tasklet waitingTasklet() {
+    public Tasklet waitingTasklet(String drugSetName) {
 
         JobSynchronization jobSynchronization = new JobSynchronization();
         jobSynchronization.setStatus("Waiting");
+        jobSynchronization.setDrugsetName(drugSetName);
 
         jobSynchronizationService.save(jobSynchronization);
 
@@ -109,14 +111,11 @@ public class AddUpdateJobConfig {
     public Tasklet runningTasklet(JobSynchronization jobSynchronization) throws JsonProcessingException {
 
         jobSynchronization.setStatus("Running");
-
         jobSynchronizationService.update(jobSynchronization);
 
         try {
-            DrugSet drugSet = new DrugSet();
             DrugsAPIController panDrugsController = new DrugsAPIController();
-            drugSet = panDrugsController.getAllDrugs();
-
+            DrugSet drugSet = panDrugsController.getAllDrugs();
             System.out.print("Updating Pandrugs set!!!!");
             if (!drugSetService.existByName(drugSet)) {
                 drugSetService.saveDrugSet(drugSet);
@@ -138,24 +137,4 @@ public class AddUpdateJobConfig {
             return RepeatStatus.FINISHED;
         };
     }
-
-    @StepScope
-    @Bean
-    public ItemReader<DrugSet> reader() {
-        return new UpdateItemReader();
-    }
-
-    @StepScope
-    @Bean
-    public ItemProcessor<DrugSet, DrugSet> processor() {
-        final CompositeItemProcessor<DrugSet, DrugSet> processor = new CompositeItemProcessor<>();
-        return processor;
-    }
-
-    @StepScope
-    @Bean
-    public ItemWriter<DrugSet> writer() {
-        return new UpdateItemWriter();
-    }
-
 }

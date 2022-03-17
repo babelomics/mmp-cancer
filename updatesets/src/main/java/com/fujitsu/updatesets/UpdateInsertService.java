@@ -32,7 +32,7 @@ public class UpdateInsertService {
     @Autowired
     ShutdownManager shutdownManager;
 
-    public void checkForUpdate() throws JsonProcessingException, InterruptedException{
+    public void checkForUpdate() throws JsonProcessingException{
 
         System.out.print("Checking for Waiting jobs...");
         List<JobSynchronization> jobSynchronizationList = jobSynchronizationRepository.findJobs("Waiting");
@@ -49,12 +49,12 @@ public class UpdateInsertService {
 
                 } catch (Exception e) {
                     e.printStackTrace();
-                } finally {
-                    shutdownManager.initiateShutdown(0);
                 }
             }
-        } else {
-            shutdownManager.initiateShutdown(0);
+
         }
+
+        shutdownManager.initiateShutdown(0);
+
     }
 }
