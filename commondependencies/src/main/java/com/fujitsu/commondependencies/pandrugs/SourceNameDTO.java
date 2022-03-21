@@ -1,10 +1,8 @@
 package com.fujitsu.commondependencies.pandrugs;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 public class SourceNameDTO {
 
     private String name;

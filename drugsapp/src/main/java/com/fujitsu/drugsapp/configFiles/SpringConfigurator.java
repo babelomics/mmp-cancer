@@ -1,4 +1,4 @@
-package com.fujitsu.drugsapp;
+package com.fujitsu.drugsapp.configFiles;
 
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;

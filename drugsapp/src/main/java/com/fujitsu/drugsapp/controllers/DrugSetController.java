@@ -38,7 +38,6 @@ public class DrugSetController {
 
     @Autowired
     private DrugSetService drugSetService;
-    private boolean processing = false;
 
     @Autowired
     private AddUpdateJobConfig addUpdateJobConfig;

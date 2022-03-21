@@ -83,35 +83,6 @@ public class DrugSourceService {
         return null;
     }
 
-    public boolean existByShortName(DrugSource drugSource){
-
-        String sql = "SELECT * FROM drug_source " +
-                "WHERE short_name='"+drugSource.getShortName().replaceAll("'","''")+"'"; //Replace ' with '' to avoid syntax errorx
-        Connection connection = null;
-        Statement statement;
-        ResultSet rs;
-
-        try {
-            connection = hikariDataSource.getConnection();
-            statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-            rs = statement.executeQuery(sql);
-            return rs.first();
-
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                assert connection != null;
-                connection.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return false;
-    }
-
     public boolean existByShortName(List<DrugSource> findDrugSource, DrugSource drugSource){
 
         for (DrugSource source : findDrugSource) {

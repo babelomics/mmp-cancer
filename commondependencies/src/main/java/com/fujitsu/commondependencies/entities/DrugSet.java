@@ -2,8 +2,7 @@ package com.fujitsu.commondependencies.entities;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -12,8 +11,7 @@ import java.util.UUID;
 
 @Table
 @Entity
-@Getter
-@Setter
+@Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class DrugSet {
 

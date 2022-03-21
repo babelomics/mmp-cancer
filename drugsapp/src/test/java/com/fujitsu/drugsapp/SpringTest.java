@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fujitsu.commondependencies.entities.Drug;
 import com.fujitsu.commondependencies.entities.DrugSet;
 import com.fujitsu.commondependencies.services.DrugSetService;
+import com.fujitsu.drugsapp.configFiles.SpringConfigurator;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;

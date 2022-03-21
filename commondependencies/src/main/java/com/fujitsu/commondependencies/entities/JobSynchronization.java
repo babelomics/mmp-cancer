@@ -1,8 +1,7 @@
 package com.fujitsu.commondependencies.entities;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -13,8 +12,7 @@ import java.util.UUID;
 
 @Table
 @Entity
-@Getter
-@Setter
+@Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class JobSynchronization {
 

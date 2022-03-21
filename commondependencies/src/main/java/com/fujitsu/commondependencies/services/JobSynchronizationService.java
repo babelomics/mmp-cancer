@@ -18,10 +18,6 @@ public class JobSynchronizationService {
 
     public void update(JobSynchronization jobSynchronization) { jobSynchronizationRepository.save(jobSynchronization); }
 
-    public List<JobSynchronization> getWaitingJobs(){
-        return jobSynchronizationRepository.findJobs("Waiting");
-    }
-
     public List<JobSynchronization> getAllJobs() { return jobSynchronizationRepository.findAll(); }
 
 

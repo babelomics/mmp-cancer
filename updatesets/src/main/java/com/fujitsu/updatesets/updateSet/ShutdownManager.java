@@ -1,4 +1,4 @@
-package com.fujitsu.updatesets;
+package com.fujitsu.updatesets.updateSet;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -11,10 +11,6 @@ class ShutdownManager {
     @Autowired
     private ApplicationContext appContext;
 
-    /*
-     * Invoke with `0` to indicate no error or different code to indicate
-     * abnormal exit. es: shutdownManager.initiateShutdown(0);
-     **/
     public void initiateShutdown(int returnCode){
         SpringApplication.exit(appContext, () -> returnCode);
     }

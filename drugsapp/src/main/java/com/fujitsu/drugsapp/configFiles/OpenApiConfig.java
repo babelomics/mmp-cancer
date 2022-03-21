@@ -1,4 +1,4 @@
-package com.fujitsu.drugsapp;
+package com.fujitsu.drugsapp.configFiles;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;

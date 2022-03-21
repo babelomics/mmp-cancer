@@ -1,12 +1,10 @@
 package com.fujitsu.commondependencies.pandrugs;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.util.List;
 
-@Setter
-@Getter
+@Data
 public class PandrugsDTO {
 
     private String standardName;

@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 public class DrugSetService {
 
     private final DrugSetRepository drugSetRepository;
-    private final DrugRepository drugRepository;
     private final DrugService drugService;
     private final DrugUpdateService drugUpdateService;
     private final DrugSourceService drugSourceService;
@@ -334,51 +333,36 @@ public class DrugSetService {
             connection = hikariDataSource.getConnection();
             connection.setAutoCommit(false);
 
-            String sqlDrugUpdate = String.format(
-                    "INSERT INTO drug_update (id, created_at, description, drug_set_id, next_update_id, previous_update_id, user_id) " +
-                            "VALUES (?::UUID, ?, ?, ?::UUID,?::UUID, ?::UUID, ?::UUID)",
-                    DrugUpdate.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugUpdate = "INSERT INTO drug_update (id, created_at, description, drug_set_id, next_update_id, previous_update_id, user_id) " +
+                            "VALUES (?::UUID, ?, ?, ?::UUID,?::UUID, ?::UUID, ?::UUID)";
 
             statement = connection.prepareStatement(sqlDrugUpdate);
 
             saveDrugUpdateByJdbc(drugUpdate, statement);
 
-            String sqlDrugSet = String.format(
-                    "INSERT INTO drug_set (id, created_at, description, name, updated_at) " +
-                            "VALUES (?::UUID, ?, ?, ?, ?)",
-                    DrugSet.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugSet = "INSERT INTO drug_set (id, created_at, description, name, updated_at) " +
+                            "VALUES (?::UUID, ?, ?, ?, ?)";
 
             statement = connection.prepareStatement(sqlDrugSet);
 
             saveDrugSetByJdbc(drugSet, statement);
 
-            String sqlDrugs = String.format(
-                    "INSERT INTO drug (id, common_name, end_update, next_version, previous_version, standard_name, start_update, drugset_id) " +
-                            "VALUES (?::UUID, ?, ?::UUID, ?::UUID, ?::UUID, ?, ?::UUID, ?::UUID)",
-                    Drug.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugs = "INSERT INTO drug (id, common_name, end_update, next_version, previous_version, standard_name, start_update, drugset_id) " +
+                            "VALUES (?::UUID, ?, ?::UUID, ?::UUID, ?::UUID, ?, ?::UUID, ?::UUID)";
 
             statement = connection.prepareStatement(sqlDrugs);
 
             saveDrugsByJdbc(drugData, statement);
 
-            String sqlDrugSources = String.format(
-                    "INSERT INTO drug_source (id, short_name, url) " +
-                            "VALUES (?::UUID, ?, ?)",
-                    DrugSource.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugSources = "INSERT INTO drug_source (id, short_name, url) " +
+                            "VALUES (?::UUID, ?, ?)";
 
             statement = connection.prepareStatement(sqlDrugSources);
 
             saveDrugSourcesByJdbc(drugSourceList, statement);
 
-            String sqlDrugNames = String.format(
-                    "INSERT INTO drug_name (id, name, drug_id, drug_source_id) " +
-                            "VALUES (?::UUID, ?, ?::UUID, ?::UUID)",
-                    DrugName.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugNames = "INSERT INTO drug_name (id, name, drug_id, drug_source_id) " +
+                            "VALUES (?::UUID, ?, ?::UUID, ?::UUID)";
 
             statement = connection.prepareStatement(sqlDrugNames);
             saveDrugNamesByJdbc(drugNameList, statement);
@@ -417,31 +401,22 @@ public class DrugSetService {
             connection.setAutoCommit(false);
 
 
-            String sqlNewDrugUpdate = String.format(
-                    "INSERT INTO drug_update (id, created_at, description, drug_set_id, next_update_id, previous_update_id, user_id) " +
-                            "VALUES (?::UUID, ?, ?, ?::UUID,?::UUID, ?::UUID, ?::UUID)",
-                    DrugUpdate.class.getAnnotation(Table.class).name()
-            );
+            String sqlNewDrugUpdate = "INSERT INTO drug_update (id, created_at, description, drug_set_id, next_update_id, previous_update_id, user_id) " +
+                            "VALUES (?::UUID, ?, ?, ?::UUID,?::UUID, ?::UUID, ?::UUID)";
 
             statement = connection.prepareStatement(sqlNewDrugUpdate);
 
             saveDrugUpdateByJdbc(newDrugUpdate, statement);
 
-            String sqlOldDrugUpdate = String.format(
-                    "UPDATE drug_update SET created_at=?, description=?, drug_set_id=?::UUID, next_update_id=?::UUID, previous_update_id=?::UUID, user_id=?::UUID " +
-                            "WHERE id=?::UUID",
-                    DrugUpdate.class.getAnnotation(Table.class).name()
-            );
+            String sqlOldDrugUpdate = "UPDATE drug_update SET created_at=?, description=?, drug_set_id=?::UUID, next_update_id=?::UUID, previous_update_id=?::UUID, user_id=?::UUID " +
+                            "WHERE id=?::UUID";
 
             statement = connection.prepareStatement(sqlOldDrugUpdate);
 
             updateDrugUpdateByJdbc(oldDrugUpdate, statement);
 
-            String sqlDrugSet = String.format(
-                    "UPDATE drug_set SET created_at=?, description=?, name=?, updated_at=? " +
-                            "WHERE id=?::UUID",
-                    DrugSet.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugSet = "UPDATE drug_set SET created_at=?, description=?, name=?, updated_at=? " +
+                            "WHERE id=?::UUID";
 
             statement = connection.prepareStatement(sqlDrugSet);
 
@@ -449,11 +424,8 @@ public class DrugSetService {
 
             if(drugsToInclude.size() > 0) {
 
-                String sqlDrugsToInsert = String.format(
-                        "INSERT INTO drug (id, common_name, end_update, next_version, previous_version, standard_name, start_update, drugset_id) " +
-                                "VALUES (?::UUID, ?, ?::UUID, ?::UUID, ?::UUID, ?, ?::UUID, ?::UUID)",
-                        Drug.class.getAnnotation(Table.class).name()
-                );
+                String sqlDrugsToInsert = "INSERT INTO drug (id, common_name, end_update, next_version, previous_version, standard_name, start_update, drugset_id) " +
+                                "VALUES (?::UUID, ?, ?::UUID, ?::UUID, ?::UUID, ?, ?::UUID, ?::UUID)";
                 statement = connection.prepareStatement(sqlDrugsToInsert);
 
 
@@ -462,32 +434,23 @@ public class DrugSetService {
 
             if(drugsToUpdate.size() > 0) {
 
-                String sqlDrugsToUpdate = String.format(
-                        "UPDATE drug SET common_name=?, end_update=?::UUID, next_version=?::UUID, previous_version=?::UUID, standard_name=?, start_update=?::UUID, drugset_id=?::UUID " +
-                                "WHERE id=?::UUID",
-                        Drug.class.getAnnotation(Table.class).name()
-                );
+                String sqlDrugsToUpdate = "UPDATE drug SET common_name=?, end_update=?::UUID, next_version=?::UUID, previous_version=?::UUID, standard_name=?, start_update=?::UUID, drugset_id=?::UUID " +
+                                "WHERE id=?::UUID";
 
                 statement = connection.prepareStatement(sqlDrugsToUpdate);
 
                 updateDrugsByJdbc(drugSet, drugsToUpdate, statement);
             }
 
-            String sqlDrugSources = String.format(
-                    "INSERT INTO drug_source (id, short_name, url) " +
-                            "VALUES (?::UUID, ?, ?)",
-                    DrugSource.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugSources = "INSERT INTO drug_source (id, short_name, url) " +
+                            "VALUES (?::UUID, ?, ?)";
 
             statement = connection.prepareStatement(sqlDrugSources);
 
             saveDrugSourcesByJdbc(drugSourceList, statement);
 
-            String sqlDrugNames = String.format(
-                    "INSERT INTO drug_name (id, name, drug_id, drug_source_id) " +
-                            "VALUES (?::UUID, ?, ?::UUID, ?::UUID)",
-                    DrugName.class.getAnnotation(Table.class).name()
-            );
+            String sqlDrugNames = "INSERT INTO drug_name (id, name, drug_id, drug_source_id) " +
+                            "VALUES (?::UUID, ?, ?::UUID, ?::UUID)";
 
             statement = connection.prepareStatement(sqlDrugNames);
             saveDrugNamesByJdbc(drugNameList, statement);
@@ -775,35 +738,6 @@ public class DrugSetService {
                 }else{
                     statement.setNull(3, Types.NULL);
                 }
-                statement.addBatch();
-
-                if ((counter + 1) % batchSize == 0 || (counter + 1) == drugSourceData.size()) {
-                    statement.executeBatch();
-                    statement.clearBatch();
-                }
-                counter++;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void updateDrugSourcesByJdbc(List<DrugSource> drugSourceData, PreparedStatement statement){
-
-        int counter = 0;
-
-        try{
-            for (DrugSource drugSource : drugSourceData) {
-                statement.clearParameters();
-                statement.setString(1, drugSource.getShortName());
-
-                if(drugSource.getUrl() != null) {
-                    statement.setURL(2, drugSource.getUrl());
-                }else{
-                    statement.setNull(2, Types.NULL);
-                }
-                statement.setString(3, drugSource.getId().toString());
-
                 statement.addBatch();
 
                 if ((counter + 1) % batchSize == 0 || (counter + 1) == drugSourceData.size()) {
